@@ -16,11 +16,11 @@ def ol_plotter(*argv):
     DIR1=argv[0]
     DIR2 = argv[1]
     tflags=argv[2]
-    print(DIR2)
     with open(DIR1+'plot_settings.json', 'r') as f:
+        print('*****reading {}plot_settings.json'.format(DIR1))
         plt_settings = json.load(f)
     datalist=[]
-    
+    print('*******overlaied plots from {}'.format(DIR2))
     for tflag in tflags:
         with open(DIR2+'/results_{}.pickle'.format(tflag), 'rb') as f:
             datalist.append(pickle.load(f))
@@ -88,12 +88,12 @@ def overlaied_dict_plotter(datalist, ks, settings):
     [x.set_linewidth(settings["boxLW"]) for x in ax.spines.values()]
     plt.savefig(settings['filename'],dpi=200, bbox_inches ='tight')
 #********************************************************************************************
-def plotter(DIR1, DIR2, filename):
-    
+def single_plotter(DIR1, DIR2, filename):
     with open(DIR1+'plot_settings.json', 'r') as f:
-        print(DIR1+'plot_settings.json')
+        print('*****reading {}plot_settings.json'.format(DIR1))
         plt_settings = json.load(f)
     
+    print('******* plots from {}'.format(DIR2))
     with open(DIR2+'/'+filename, 'rb') as f:
         data = pickle.load(f)
     
