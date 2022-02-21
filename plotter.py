@@ -89,6 +89,7 @@ def plot_list(*argv):
     y = argv[1]
     settings = argv[2]
     fig,ax = plt.subplots(1,1,figsize = settings["figsize"]) 
+    ax.set_title(DIR) 
     ax.plot(x, y, linewidth = settings['lineW'])
     ax.legend(settings['legend'], fontsize = settings['legF'])
     ax.set_xlim(settings['xlims'])
@@ -105,7 +106,8 @@ def overlaied_list_plotter(datalist, ks, settings, DIR, tflags):
     settings['ylab'] = ks[3]
     tmpstr=DIR+"/"+ks[1]+"_{}_{}".format(tflags[0],tflags[1])
     settings['filename']=tmpstr
-    fig,ax = plt.subplots(1,1,figsize = settings["figsize"]) 
+    fig,ax = plt.subplots(1,1,figsize = settings["figsize"])
+    ax.set_title(DIR) 
     lstyle=[':','-']
     for t,data in enumerate(datalist):
         settings['legend'] = data[ks[2]]
@@ -127,6 +129,8 @@ def plot_dict(*argv):
     y = argv[1]
     settings = argv[2]
     fig,ax = plt.subplots(1,1,figsize = settings["figsize"])
+    ax.set_title(DIR) 
+    lstyle=[':','-']
     for key in settings['legend']:
         ax.plot(x, y[key], linewidth = settings['lineW'])
     ax.legend(settings['legend'], fontsize = settings['legF'])
@@ -146,6 +150,8 @@ def overlaied_dict_plotter(datalist, ks, settings, DIR, tflags):
     tmpstr=DIR+"/"+ks[1]+"_{}_{}".format(tflags[0],tflags[1])
     settings['filename']=tmpstr
     fig,ax = plt.subplots(1,1,figsize = settings["figsize"]) 
+    ax.set_title(DIR) 
+    lstyle=[':','-']
     lstyle=[':','-']
     for t,data in enumerate(datalist):
         settings['legend'] = list(data[ks[1]].keys())
