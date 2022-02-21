@@ -28,7 +28,7 @@ if __name__ == "__main__":
     DIR2 = ["1000C-2ndrun", "1000C", "1200C", "1300C-2ndrun"]#, "DONE-1300C",,"1200C-2ndrun", 
     #DIR2 =["DONE-1300C"]
     DIRs = [DIR1+d+'/' for d in DIR2]
-    actionflags = {'calc':True, 'plot':True, 'plotoverlaid':[True,['first', 'last']]}
+    actionflags = {'calc':False, 'plot':True, 'plotoverlaid':[True,['first', 'last']]}
     timeflags = ['first', 'last']
     main(DIR1, DIRs, timeflags, actionflags)
 
