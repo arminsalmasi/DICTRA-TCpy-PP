@@ -17,7 +17,7 @@ def value_correction(DIR1, DIR2, tflags):
         with open(DIR1+'/name_pairs.json', 'rb') as f:
             setting = json.load(f)
             dict_in['name_pairs'] = setting['name_pairs']
-            dict_in['pahse_changes'] = setting['phase_changes']
+            dict_in['phase_changes'] = setting['phase_changes']
     
         dict1 = correct_phase_indices(dict_in)
         dict2 = add_compSets(dict1)

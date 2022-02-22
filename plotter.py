@@ -8,10 +8,50 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tc_python import *
 
+import numpy as np
 from clibv2 import *  # %matplotlib qt#user_path = !eval echo ~$USER
+import pandas as pd 
 
+#******************************************************************************************************
+def single_plotter(DIR1, DIR2, filename):
+    with open(DIR1+'plot_settings.json', 'r') as f:
+        print('*****reading {}plot_settings.json'.format(DIR1))
+        plt_settings = json.load(f)
+    
+    print('******* plots from {}'.format(DIR2))
+    with open(DIR2+'/'+filename, 'rb') as f:
+        data = pickle.load(f)
+    
+    if not(plt_settings['xlims']):
+        plt_settings['xlims'] = get_xlims(data)
+    plt_settings['ylims'] = get_ylims(0, 1)
 
-#********************************************************************************************
+    lst = [('tS_DICT_ufs', '$U \: fraction$', 'elnames'), ('tS_DICT_mfs', '$Mole \: Fraction$' ,'elnames') ,('tS_DICT_npms', '$Phase \: Fraction$', 'tS_DICT_phnames') ]
+    for i in lst:
+        plt_settings['filename'] = DIR2 + "/" + i[0] + '_{}'.format(int(data['nearestTime']))
+        plt_settings['title'] = DIR2
+        plt_settings['legend'] = data[i[2]]
+        plt_settings['ylab'] = i[1]
+        plot_list(data['tS_pts'], data[i[0]], plt_settings)
+    
+    lst = [('tS_TC_ws', '$Mass \:Fraction$'), ('tS_TC_NEAT_npms', '$Phase \: Fraction$'), ('tS_TC_NEAT_vpvs', '$Volume \: Fraction$'), 
+    ('nameChanged_CQT_tS_TC_NEAT_npms', '$Phase \: Fraction$'), ('sum_tS_DICT_npms' ,'Phase Fraction'), ('sum_CQT_tS_TC_NEAT_npms', '$Phase \: Fraction$')]
+    for i in lst:
+        plt_settings['filename'] = DIR2+ "/" + i[0] + '_{}'.format(int(data['nearestTime']))
+        plt_settings['title'] = DIR2
+        plt_settings['legend'] = data[i[0]].keys()
+        plt_settings['ylab'] = i[1]
+        plot_dict(data['tS_pts'], data[i[0]], plt_settings)
+
+    lst = [('tS_TC_acSER', "$Log_{10}}(Activity) \: (SER)$")]
+    for i in lst:
+        plt_settings['filename'] = DIR2+ "/" + i[0] + '_{}'.format(int(data['nearestTime']))
+        plt_settings['title'] = DIR2
+        plt_settings['legend'] = ["C","TI","CO"]#data[i[0]].keys()
+        plt_settings['ylab'] = i[1]
+        plot_ylog_dict(data['tS_pts'], data[i[0]], plt_settings)
+    plt.close('all')
+#*********************************************************************************************
 def ol_plotter(*argv):
     DIR1=argv[0]
     DIR2 = argv[1]
@@ -49,7 +89,18 @@ def ol_plotter(*argv):
         plt_settings['ylab'] = i[1]
         plt_settings['filename'] = DIR2+"/"+i[0]+"_{}_{}".format(tflags[0],tflags[1])
         plt_settings['title'] = DIR2
-        overlaied_dict_plotter(datalist, ks, plt_settings)
+        plot_keys=[]
+        overlaied_dict_plotter(datalist, ks, plt_settings,plot_keys)
+    
+    lst = [('tS_TC_acSER', "$log_{10}(Activity)\: [SER]$")]
+    for i in lst:
+        ks = ['tS_pts', i[0], DIR2]
+        plt_settings['ylab'] = i[1]
+        plt_settings['filename'] = DIR2+"/"+i[0]+"_{}_{}".format(tflags[0],tflags[1])
+        #plt_settings['title'] = DIR2
+        plt_settings['title'] = ''
+        plot_keys = []#["C","CO","TI"]
+        overlaied_dict_ylog_plotter(datalist, ks, plt_settings, plot_keys)
     plt.close('all')
 #********************************************************************************************
 def overlaied_list_plotter(datalist, ks, settings):
@@ -69,12 +120,32 @@ def overlaied_list_plotter(datalist, ks, settings):
     [x.set_linewidth(settings["boxLW"]) for x in ax.spines.values()]
     plt.savefig(settings['filename'],dpi=200, bbox_inches ='tight')
 #********************************************************************************************
-def overlaied_dict_plotter(datalist, ks, settings):
+def overlaied_list_ylog_plotter(datalist, ks, settings):
+    fig,ax = plt.subplots(1,1,figsize = settings["figsize"])
+    lstyle=[':','-']
+    for t,data in enumerate(datalist):
+        settings['legend'] = data[ks[2]]
+        ax.plot(data[ks[0]],np.log10(data[ks[1]]),lstyle[t],linewidth = settings['lineW'])
+    ax.legend(np.append(settings['legend'],settings['legend']), fontsize = settings['legF'])
+    ax.set_xlim(settings['xlims'])
+    ax.set_title(settings['title'])
+    ax.set_ylabel(settings['ylab'], fontsize = settings['labF'])
+    ax.set_xlabel(settings['xlab'], fontsize = settings['labF'])
+    ax.tick_params(axis = "both", labelsize = settings['tickS'])
+    ax.locator_params(axis = 'y', nbins = settings['bins'])
+    ax.locator_params(axis = 'x', nbins = settings['bins'])
+    [x.set_linewidth(settings["boxLW"]) for x in ax.spines.values()]
+    plt.savefig(settings['filename'],dpi=200, bbox_inches ='tight')
+#********************************************************************************************
+def overlaied_dict_plotter(datalist, ks, settings, plot_keys):
     fig,ax = plt.subplots(1,1,figsize = settings["figsize"]) 
     lstyle=[':','-']
     lstyle=[':','-']
     for t,data in enumerate(datalist):
-        settings['legend'] = list(data[ks[1]].keys())
+        if not plot_keys:
+            settings['legend'] = list(data[ks[1]].keys())
+        else:
+            settings['legend'] = plot_keys
         for leg in settings['legend']:
             ax.plot(data[ks[0]],data[ks[1]][leg],lstyle[t],linewidth = settings['lineW'])
     ax.legend(np.append(settings['legend'],settings['legend']), fontsize = settings['legF'])
@@ -88,36 +159,38 @@ def overlaied_dict_plotter(datalist, ks, settings):
     [x.set_linewidth(settings["boxLW"]) for x in ax.spines.values()]
     plt.savefig(settings['filename'],dpi=200, bbox_inches ='tight')
 #********************************************************************************************
-def single_plotter(DIR1, DIR2, filename):
-    with open(DIR1+'plot_settings.json', 'r') as f:
-        print('*****reading {}plot_settings.json'.format(DIR1))
-        plt_settings = json.load(f)
-    
-    print('******* plots from {}'.format(DIR2))
-    with open(DIR2+'/'+filename, 'rb') as f:
-        data = pickle.load(f)
-    
-    if not(plt_settings['xlims']):
-        plt_settings['xlims'] = get_xlims(data)
-    plt_settings['ylims'] = get_ylims(0, 1)
-
-    lst = [('tS_DICT_ufs', '$U \: fraction$', 'elnames'), ('tS_DICT_mfs', '$Mole \: Fraction$' ,'elnames') ,('tS_DICT_npms', '$Phase \: Fraction$', 'tS_DICT_phnames') ]
-    for i in lst:
-        plt_settings['filename'] = DIR2 + "/" + i[0] + '_{}'.format(int(data['nearestTime']))
-        plt_settings['title'] = DIR2
-        plt_settings['legend'] = data[i[2]]
-        plt_settings['ylab'] = i[1]
-        plot_list(data['tS_pts'], data[i[0]], plt_settings)
-    
-    lst = [('tS_TC_ws', '$Mass \:Fraction$'), ('tS_TC_NEAT_npms', '$Phase \: Fraction$'), ('tS_TC_NEAT_vpvs', '$Volume \: Fraction$'), 
-    ('nameChanged_CQT_tS_TC_NEAT_npms', '$Phase \: Fraction$'), ('sum_tS_DICT_npms' ,'Phase Fraction'), ('sum_CQT_tS_TC_NEAT_npms', '$Phase \: Fraction$')]
-    for i in lst:
-        plt_settings['filename'] = DIR2+ "/" + i[0] + '_{}'.format(int(data['nearestTime']))
-        plt_settings['title'] = DIR2
-        plt_settings['legend'] = data[i[0]].keys()
-        plt_settings['ylab'] = i[1]
-        plot_dict(data['tS_pts'], data[i[0]], plt_settings)
-    plt.close('all')
+def overlaied_dict_ylog_plotter(datalist, ks, settings, plot_keys):
+    fig,ax = plt.subplots(1,1,figsize = settings["figsize"]) 
+    lstyle=[':','-']
+    lstyle=[':','-']
+    DIR = ks[2]
+    for t,data in enumerate(datalist):
+        if not plot_keys:
+            settings['legend'] = list(data[ks[1]].keys())
+        else:
+            settings['legend'] = plot_keys
+        for leg in settings['legend']:
+            ax.plot(data[ks[0]],np.log10(data[ks[1]][leg]),lstyle[t],linewidth = settings['lineW'])
+            tmp = pd.DataFrame() #temp
+            if t==0: #temp 2nd ittertion
+                tmp['x{}'.format(t+1)]= data[ks[0]] #temp
+                tmp[leg+'{}'.format(t+1)] = np.log10(data[ks[1]][leg]) #temp
+            tmp.to_csv(DIR+'/log10_AC_first_SER.csv',index=False,sep=',')
+            tmp = pd.DataFrame() #temp
+            if t==1: #temp 2nd ittertion
+                tmp['x{}'.format(t+1)]= data[ks[0]] #temp
+                tmp[leg+'{}'.format(t+1)] = np.log10(data[ks[1]][leg]) #temp
+            tmp.to_csv(DIR+'/log10_AC_last_SER.csv',index=False,sep=',')
+    ax.legend(np.append(settings['legend'],settings['legend']), fontsize = settings['legF'])
+    ax.set_xlim(settings['xlims'])
+    ax.set_title(settings['title'])
+    ax.set_ylabel(settings['ylab'], fontsize = settings['labF'])
+    ax.set_xlabel(settings['xlab'], fontsize = settings['labF'])
+    ax.tick_params(axis = "both", labelsize = settings['tickS'])
+    ax.locator_params(axis = 'y', nbins = settings['bins'])
+    ax.locator_params(axis = 'x', nbins = settings['bins'])
+    [x.set_linewidth(settings["boxLW"]) for x in ax.spines.values()]
+    plt.savefig(settings['filename'],dpi=200, bbox_inches ='tight')
 #********************************************************************************************
 def plot_list(*argv):
     '''input: x, y, legend, title, xlims '''
@@ -154,7 +227,44 @@ def plot_dict(*argv):
     ax.tick_params(axis = "both", labelsize = settings['tickS'])
     ax.locator_params(axis = 'y', nbins = settings['bins'])
     ax.locator_params(axis = 'x', nbins = settings['bins'])
-    #plt.rcParams['axes.linewidth'] = settings["boxLW"] 
+    [x.set_linewidth(settings["boxLW"]) for x in ax.spines.values()]
+    plt.savefig(settings['filename'], dpi=200, bbox_inches ='tight')
+#********************************************************************************************
+def plot_ylog_list(*argv):
+    '''input: x, y, legend, title, xlims '''
+    x = argv[0]
+    y = argv[1]
+    settings = argv[2]
+    fig,ax = plt.subplots(1,1,figsize = settings["figsize"])
+    ax.plot(x, np.log10(y), linewidth = settings['lineW'])
+    ax.legend(settings['legend'], fontsize = settings['legF'])
+    ax.set_xlim(settings['xlims'])
+    ax.set_title(settings['title'])
+    ax.set_ylabel(settings['ylab'], fontsize = settings['labF'])
+    ax.set_xlabel(settings['xlab'], fontsize = settings['labF'])
+    ax.tick_params(axis = "both", labelsize = settings['tickS'])
+    ax.locator_params(axis = 'y', nbins = settings['bins'])
+    ax.locator_params(axis = 'x', nbins = settings['bins'])
+    [x.set_linewidth(settings["boxLW"]) for x in ax.spines.values()]
+    plt.savefig(settings['filename'],dpi=200, bbox_inches ='tight')
+#********************************************************************************************
+def plot_ylog_dict(*argv):
+    '''input: x, y, legend, title, xlims '''
+    x = argv[0]
+    y = argv[1]
+    settings = argv[2]
+    fig,ax = plt.subplots(1,1,figsize = settings["figsize"])
+    lstyle=[':','-']
+    for key in settings['legend']:
+        ax.plot(x, np.log10(y[key]), linewidth = settings['lineW'])
+    ax.legend(settings['legend'], fontsize = settings['legF'])
+    ax.set_xlim(settings['xlims'])
+    ax.set_title(settings['title'])
+    ax.set_ylabel(settings['ylab'], fontsize = settings['labF'])
+    ax.set_xlabel(settings['xlab'], fontsize = settings['labF'])
+    ax.tick_params(axis = "both", labelsize = settings['tickS'])
+    ax.locator_params(axis = 'y', nbins = settings['bins'])
+    ax.locator_params(axis = 'x', nbins = settings['bins'])
     [x.set_linewidth(settings["boxLW"]) for x in ax.spines.values()]
     plt.savefig(settings['filename'], dpi=200, bbox_inches ='tight')
 #********************************************************************************************
