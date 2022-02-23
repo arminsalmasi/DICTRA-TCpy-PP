@@ -10,46 +10,53 @@ def single_plotter(DIR1, DIR2, filename):
     with open(DIR1+'plot_settings.json', 'r') as f:
         print('*****reading {}plot_settings.json'.format(DIR1))
         plt_settings = json.load(f)
-    print('******* plots from {}'.format(DIR2))
+    
+    
     with open(DIR2+'/'+filename, 'rb') as f:
         data = pickle.load(f)
-    plt_settings['xlims'] = [150,400]
-    lst = [('tS_TC_NEAT_G', '$Permeability$', 'elnames'),('tS_TC_NEAT_M', '$Mobility$$', 'elnames')]
-    for phase in data['tS_TC_NEAT_G'].keys():
-        if 'BCC' in phase:
-            for k in lst:
-                plt_settings['filename'] = DIR2 + "/" + k[0] + '_{}'.format(int(data['nearestTime']))
-                plt_settings['title'] = phase
-                plt_settings['legend'] = data[k[2]]
-                plt_settings['ylab'] = k[1]
-                x,y =[],[]                
-                for nel in range(data[k[0]][phase].shape[1]):
-                    ynel = []
-                    xnel =[]
-                    for npt in range(data[k[0]][phase].shape[0]):
-                        if data[k[0]][phase][npt,nel] !=0 :
-                            ynel.append(np.log10([data[k[0]][phase][npt,nel]]))
-                            xnel.append(data['tS_pts'][npt])
-                    x.append(xnel)
-                    y.append(ynel)
-                phase_mg_plot(x, y, plt_settings)
-    k = ('tS_TC_NEAT_phXs', '$Fraction$', 'elnames')
-    for phase in data['tS_TC_NEAT_phXs'].keys():
-        if 'BCC' in phase:
-            plt_settings['filename'] = DIR2 + "/" + k[0] + '_{}'.format(int(data['nearestTime']))
-            plt_settings['title'] = phase
-            plt_settings['legend'] = data[k[2]]
-            plt_settings['ylab'] = k[1]
-            x,y =[],[]                
-            phase_x_plot(data['tS_pts'], data[k[0]][phase], plt_settings)
+        print('******* plots from {}'.format(DIR2))
+    
+    plt_settings['xlims'] = [200,400]
+    plt_settings['figsize'] = [11,11]
+    
+    lst1 = [('tS_TC_NEAT_G', '$log_{10}(\Gamma ^{BCC} _{ \\alpha })$', 'elnames'),('tS_TC_NEAT_M', '$log_{10}(M^{BCC}_{\\alpha})$', 'elnames')]
+    phase = 'BCC_A2#1'
+    plt_settings['title'] = phase
+    leglist = [nel for nel,el in enumerate(data['elnames']) if el in ['W','CO','C']]
+    plt_settings['legend'] = data['elnames'][leglist]
+    for k in lst1:
+        plt_settings['filename'] = DIR2 + "/" + k[0] + '_{}'.format(int(data['nearestTime']))
+        plt_settings['ylab'] = k[1]
+        x,y = remove_undifined_logs(data, phase, k)
+        phase_mg_plot(x, y, plt_settings,leglist)
+    
+    lst2 = ('tS_TC_NEAT_phXs', '$X^{BCC} _{ \\alpha }$', 'elnames')
+    plt_settings['filename'] = DIR2 + "/" + lst2[0] + '_{}'.format(int(data['nearestTime']))
+    plt_settings['legend'] = data['elnames']
+    plt_settings['ylab'] = lst2[1]
+    phase_x_plot(data['tS_pts'], data[lst2[0]][phase], plt_settings)
 #*********************************************************************************************
-def phase_mg_plot(x, y, settings):
+def remove_undifined_logs(data, phase, k):
+    x,y=[],[]
+    for nel in range(data[k[0]][phase].shape[1]):
+        ynel, xnel =[], []
+        for npt in range(data[k[0]][phase].shape[0]):
+            if data[k[0]][phase][npt,nel] !=0 :
+                ynel.append(np.log10([data[k[0]][phase][npt,nel]]))
+                xnel.append(data['tS_pts'][npt])
+        x.append(xnel)
+        y.append(ynel)
+    y=np.array(y)
+    x=np.array(x)
+    return x,y
+#*********************************************************************************************
+def phase_mg_plot(x, y, settings,leglist):
     fig,ax = plt.subplots(1,1,figsize = settings["figsize"])
-    for nel in range(len(y)):
-        ax.plot(x[nel],y[nel],linewidth = settings['lineW'])
+    for nel in leglist:
+        ax.plot(x[nel,:],y[nel,:],linewidth = settings['lineW'])
     ax.legend(settings['legend'], fontsize = settings['legF'])
     ax.set_xlim(settings['xlims'])
-    ax.set_title(settings['title'])
+    #ax.set_title(settings['title'])
     ax.set_ylabel(settings['ylab'], fontsize = settings['labF'])
     ax.set_xlabel(settings['xlab'], fontsize = settings['labF'])
     ax.tick_params(axis = "both", labelsize = settings['tickS'])
@@ -64,7 +71,7 @@ def phase_x_plot(x, y, settings):
         ax.plot(x,y[:,nel],linewidth = settings['lineW'])
     ax.legend(settings['legend'], fontsize = settings['legF'])
     ax.set_xlim(settings['xlims'])
-    ax.set_title(settings['title'])
+    #ax.set_title(settings['title'])
     ax.set_ylabel(settings['ylab'], fontsize = settings['labF'])
     ax.set_xlabel(settings['xlab'], fontsize = settings['labF'])
     ax.tick_params(axis = "both", labelsize = settings['tickS'])
@@ -83,4 +90,4 @@ for DIR in DIRs:
         else:
             continue
 
-plt.show()
+#plt.show()
