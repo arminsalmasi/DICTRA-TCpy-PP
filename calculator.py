@@ -186,18 +186,16 @@ def tccalc(dict_input):
         T = dict['T']
         elnames = dict['elnames']
         pth = dict['path']
-        p3flag = dict['tc_setting']['p3flag']
-        elnames = np.concatenate((elnames,['Fe','C'])) #temp
+        poly3Flag = dict['tc_setting']['p3flag']
+        McalcFlag = dict['tc_setting']['mobFlag'] #temp flag for calcualtion of mobilities
     except:
         print('error in TC input data')
         sys.exit()
     else:
         print('calculating thermodynaics')
     with TCPython() as start:
-        if p3flag and os.path.isfile('{}/p.POLY3'.format(pth)):
-            #poly = start.select_database_and_elements(database, elnames).get_system().with_single_equilibrium_calculation()
-            #temp
-            poly = start.select_thermodynamic_and_kinetic_databases_with_elements(database,"MOBFE5", elnames).get_system().with_single_equilibrium_calculation()
+        if poly3Flag and os.path.isfile('{}/p.POLY3'.format(pth)):
+            poly = start.select_database_and_elements(database, elnames).get_system().with_single_equilibrium_calculation()
             poly.run_poly_command('read {}/p.POLY3'.format(pth))
             #poly.run_poly_command('list-status , cps, ')
             poly.remove_all_conditions()
@@ -205,18 +203,20 @@ def tccalc(dict_input):
             poly.set_condition('P', 1e5)
             print('************read poly3 file, calculating')
         else:
-            #poly = start.set_cache_folder( "./_cache2").select_database_and_elements(database, elnames).get_system().with_single_equilibrium_calculation()
-            poly = start.set_cache_folder( "./_cache2").select_thermodynamic_and_kinetic_databases_with_elements(database,"MOBFE5", elnames).get_system().with_single_equilibrium_calculation() #tmp
+            if McalcFlag: 
+               # ''' necessary to get mobilities from mobfe5
+               elnames = np.concatenate((elnames,['Fe','C'])) #temp
+               poly = start.set_cache_folder( "./_cache2").select_thermodynamic_and_kinetic_databases_with_elements(database,"MOBFE5", elnames).get_system().with_single_equilibrium_calculation() #tmp
+               poly.set_condition('X(FE)', 1e-6) #temp
+               poly.set_condition('X(C)', 1e-6) #temp
+               elnames = elnames[:-2] #temp
+               tc_M, tc_G = {},{} #temp
+            elif not McalcFlag:
+                poly = start.set_cache_folder( "./_cache2").select_database_and_elements(database, elnames).get_system().with_single_equilibrium_calculation()
         if len(phsToSus)>0:
             for phase in phsToSus:
                 poly.set_phase_to_suspended(phase)
         poly.set_condition("T", T)
-        # ''' necessary to get mobilities from mobfe5
-        poly.set_condition('X(FE)', 1e-6) #temp
-        poly.set_condition('X(C)', 1e-6) #temp
-        elnames = elnames[:-2] #temp
-        tc_M, tc_G = {},{} #temp
-        
         tc_phnames, tc_npms, tc_vpvs, tc_phXs = {}, {}, {}, {}
         tc_acRefs, tc_acSER, tc_mus, tc_ws = defaultdict(list), defaultdict(list), defaultdict(list), defaultdict(list)
         for pt in range(n_pts):
@@ -237,18 +237,21 @@ def tccalc(dict_input):
                 tc_npms['{}, {}'.format(pt, ph)] = pntEq.get_value_of('npm({})'.format(ph))
                 tc_vpvs['{}, {}'.format(pt, ph)] = pntEq.get_value_of('vpv({})'.format(ph))
                 temp1 = []
-                temp2 = [] #tmp
-                temp3 = [] #tmp
+                if McalcFlag: #temp
+                    temp2, temp3 = [],[] #temp
+                    for el2 in elnames[:]:
+                        temp2.append(pntEq.get_value_of('M({}, {})'.format(ph, el2))) #temp
+                        temp3.append(pntEq.get_value_of('M({}, {})'.format(ph, el2))*pntEq.get_value_of('X({}, {})'.format(ph, el2))) #temp
+                    tc_M['{}, {}'.format(pt, ph)] = np.array(temp2) #temp
+                    tc_G['{}, {}'.format(pt, ph)] = np.array(temp3) #temp
                 for el2 in elnames[:]:
-                    temp1.append(pntEq.get_value_of('X({}, {})'.format(ph, el2)))
-                    temp2.append(pntEq.get_value_of('M({}, {})'.format(ph, el2))) #temp
-                    temp3.append(pntEq.get_value_of('M({}, {})'.format(ph, el2))*pntEq.get_value_of('X({}, {})'.format(ph, el2))) #temp
+                    temp1.append(pntEq.get_value_of('X({}, {})'.format(ph, el2)))    
                 tc_phXs['{}, {}'.format(pt, ph)] = np.array(temp1)
-                tc_M['{}, {}'.format(pt, ph)] = np.array(temp2) #temp
-                tc_G['{}, {}'.format(pt, ph)] = np.array(temp3) #temp
-    clear_output(wait = False)
-    dict['tS_TC_M'] = tc_M #temp
-    dict['tS_TC_G'] = tc_G #temp
+    #clear_output(wait = False)
+    if McalcFlag: #temp
+        dict['tS_TC_M'] = tc_M #temp
+        dict['tS_TC_G'] = tc_G #temp
+        tc_NEAT_G, tc_NEAT_M = {}, {} #temp # for treaming
     
     dict['tS_TC_phnames'] = tc_phnames
     dict['tS_TC_npms'] = tc_npms
@@ -258,11 +261,10 @@ def tccalc(dict_input):
     dict['tS_TC_acSER'] = tc_acSER
     dict['tS_TC_mus'] = tc_mus
     dict['tS_TC_ws'] = tc_ws
+    
     ### trimming
     tc_NEAT_mfs, tc_NEAT_npms, tc_NEAT_vpvs, tc_NEAT_phXs = {}, {}, {}, {}
     tc_NEAT_phnames = []
-
-    tc_NEAT_G, tc_NEAT_M = {}, {} #temp
     
     for nel, el in enumerate(elnames):
         tc_NEAT_mfs[el] = mfs[:, nel]
@@ -274,9 +276,9 @@ def tccalc(dict_input):
         tc_NEAT_npms[ph] = np.zeros([n_pts])
         tc_NEAT_vpvs[ph] = np.zeros([n_pts])
         tc_NEAT_phXs[ph] = np.zeros([n_pts, len(elnames)])
-    
-        tc_NEAT_G[ph] = np.zeros([n_pts, len(elnames)]) #temp
-        tc_NEAT_M[ph] = np.zeros([n_pts, len(elnames)]) #temp
+        if McalcFlag: #temp
+            tc_NEAT_G[ph] = np.zeros([n_pts, len(elnames)]) #temp
+            tc_NEAT_M[ph] = np.zeros([n_pts, len(elnames)]) #temp
     
     for nph, ph in enumerate(tc_NEAT_phnames):
         for pt in range(n_pts):
@@ -285,17 +287,17 @@ def tccalc(dict_input):
                 tc_NEAT_vpvs[ph][pt] = tc_vpvs['{}, {}'.format(str(pt), ph)]    
                 for nel, el in enumerate(elnames):
                     tc_NEAT_phXs[ph][pt, nel] = tc_phXs['{}, {}'.format(str(pt), ph)][nel]
-
-                    tc_NEAT_G[ph][pt, nel] = tc_G['{}, {}'.format(str(pt), ph)][nel] #temp
-                    tc_NEAT_M[ph][pt, nel] = tc_M['{}, {}'.format(str(pt), ph)][nel] #temp
+                    if McalcFlag: #temp
+                        tc_NEAT_G[ph][pt, nel] = tc_G['{}, {}'.format(str(pt), ph)][nel] #temp
+                        tc_NEAT_M[ph][pt, nel] = tc_M['{}, {}'.format(str(pt), ph)][nel] #temp
 
     dict['tS_TC_NEAT_phnames'] = tc_NEAT_phnames
     dict['tS_TC_NEAT_npms'] = tc_NEAT_npms
     dict['tS_TC_NEAT_vpvs'] = tc_NEAT_vpvs
     dict['tS_TC_NEAT_phXs'] = tc_NEAT_phXs
     dict['tS_TC_NEAT_mfs'] = tc_NEAT_mfs
-
-    dict['tS_TC_NEAT_G'] = tc_NEAT_G  #temp
-    dict['tS_TC_NEAT_M'] = tc_NEAT_M  #temp
+    if McalcFlag:
+        dict['tS_TC_NEAT_G'] = tc_NEAT_G  #temp
+        dict['tS_TC_NEAT_M'] = tc_NEAT_M  #temp
     return dict
 

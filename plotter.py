@@ -6,11 +6,11 @@ import pickle
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from tc_python import *
 
-import numpy as np
 from clibv2 import *  # %matplotlib qt#user_path = !eval echo ~$USER
-import pandas as pd 
+
 
 #******************************************************************************************************
 def single_plotter(DIR1, DIR2, filename):
@@ -47,7 +47,7 @@ def single_plotter(DIR1, DIR2, filename):
     for i in lst:
         plt_settings['filename'] = DIR2+ "/" + i[0] + '_{}'.format(int(data['nearestTime']))
         plt_settings['title'] = DIR2
-        plt_settings['legend'] = ["C","TI","CO"]#data[i[0]].keys()
+        plt_settings['legend'] = plt_settings["acSERleg"]#data[i[0]].keys()
         plt_settings['ylab'] = i[1]
         plot_ylog_dict(data['tS_pts'], data[i[0]], plt_settings)
     plt.close('all')
