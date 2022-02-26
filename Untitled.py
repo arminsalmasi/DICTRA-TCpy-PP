@@ -31,9 +31,10 @@ def main(path):
         [ol_plotter(path, dir, actionFlags['plotoverlaid'][1]) for dir in dirList]
         
 if __name__ == "__main__":
-    path = "/Volumes/exFAT/LUND/REALPCBN/"
+    path = '/Volumes/exFAT/LUND/WC15Co-Ti64-200um200um/'
     main(path)
 
+    #path = "/Volumes/exFAT/LUND/REALPCBN/"
     #DIR1 = '/Volumes/exFAT/LUND/WC15Co-Ti64-200um200um/'
     #dirList =["DONE-1300C", "1300C-2ndrun", "DONE-1000C", "DONE-1000C-2ndrun", "DONE-1200C", "DONE-1200C-2ndrun", "DONE-1200C-570sec"]
     #DIR1 = '/Volumes/exFAT/LUND/PCD/'
@@ -46,8 +47,6 @@ if __name__ == "__main__":
     #dirList = ["01-22-WC6CO-BCC-200um-200um-FCC1234-BCC12345-DICTRAFCC-M6-M12-MCSHP-LiQ12-2openBC-3600sec"]
     #DIR1 = '/Volumes/exFAT/LUND/WC15Co-Ti64-200um200um/'
     #dirList =["DONE-1300C", "1300C-2ndrun", "DONE-1000C", "DONE-1000C-2ndrun", "DONE-1200C", "DONE-1200C-2ndrun", "DONE-1200C-570sec"]
-
-
     #bashCommand = "open "+'nameChanged_CQT_tS_TC_NEAT_npms_{}.png'.format(int(tS_tc_VLUs['nearestTime']))
     #process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
     ## %matplotlib qt#user_path = !eval echo ~$USERoutput, error = process.communicate()
