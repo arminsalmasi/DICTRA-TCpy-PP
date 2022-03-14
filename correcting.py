@@ -1,30 +1,28 @@
 import copy
-import json
 import pickle
 import sys
 
 import numpy as np
 from tc_python import *
 
-from clibv2 import *  # %matplotlib qt#user_path = !eval echo ~$USER
+#from clibv2 import *  # %matplotlib qt#user_path = !eval echo ~$USER
 
 #********************************************************************************************
-def value_correction(DIR1, DIR2, tflags):
-    for tflag in tflags:
-        with open(DIR2+'/uncorrected_results_{}.pickle'.format(tflag), 'rb') as f:
+def value_correction(path,settings):
+    for tflag in settings['timeflags']:
+        print(">>>>>>>>> correcting tstp {} in {}".format(tflag,path)) 
+        with open(path+'uncorrected_results_{}.pickle'.format(tflag), 'rb') as f:
             dict_in = pickle.load(f)
     
-        with open(DIR1+'/name_pairs.json', 'rb') as f:
-            setting = json.load(f)
-            dict_in['name_pairs'] = setting['name_pairs']
-            dict_in['phase_changes'] = setting['phase_changes']
+        dict_in['name_pairs'] = settings['name_pairs']
+        dict_in['phase_changes'] = settings['phase_changes']
     
         dict1 = correct_phase_indices(dict_in)
         dict2 = add_compSets(dict1)
         dict3 = phnameChange(dict2)
         dict_out = add_compSets_DICT(dict3)
         
-        with open(DIR2+'results_{}.pickle'.format(tflag), 'wb') as f:
+        with open(path+'results_{}.pickle'.format(tflag), 'wb') as f:
             pickle.dump(dict_out, f)
 #********************************************************************************************
 def correct_phase_indices(dict_input):

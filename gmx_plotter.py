@@ -10,13 +10,9 @@ def single_plotter(DIR1, DIR2, filename):
     with open(DIR1+'plot_settings.json', 'r') as f:
         print('*****reading {}plot_settings.json'.format(DIR1))
         plt_settings = json.load(f)
-    
-    
     with open(DIR2+'/'+filename, 'rb') as f:
         data = pickle.load(f)
         print('******* plots from {}'.format(DIR2))
-    
-    plt_settings['xlims'] = [200,400]
     plt_settings['figsize'] = [11,11]
     
     lst1 = [('tS_TC_NEAT_G', '$log_{10}(\Gamma ^{BCC} _{ \\alpha })$', 'elnames'),('tS_TC_NEAT_M', '$log_{10}(M^{BCC}_{\\alpha})$', 'elnames')]
@@ -80,7 +76,7 @@ def phase_x_plot(x, y, settings):
     [x.set_linewidth(settings["boxLW"]) for x in ax.spines.values()]
     plt.savefig(settings['filename'],dpi=200, bbox_inches ='tight')
 #*********************************************************************************************
-def all_plotter(DIR1, DIRs):
+def all_GMX_plotter(DIR1, DIRs):
     with open(DIR1+'plot_settings.json', 'r') as f:
         print('*****reading {}plot_settings.json'.format(DIR1))
         settings = json.load(f)
@@ -88,14 +84,12 @@ def all_plotter(DIR1, DIRs):
     phase = 'BCC_A2#1'
     settings['title'] = phase
     settings['figsize'] = [13,13]
-    settings['xlims'] = [200,350]
-    ylims = [[-22,-15.5],[-17,-12]]
     k1 = ('tS_TC_NEAT_G', '$log_{10}(\Gamma ^{BCC} _{ \\alpha })$', 'elnames')
     k2 = ('tS_TC_NEAT_M', '$log_{10}(M^{BCC}_{\\alpha})$', 'elnames')
     ks = [k1,k2]
     for nk,k in  enumerate(ks):
         fig,ax = plt.subplots(1,1,figsize = settings["figsize"])
-        settings['ylims'] = ylims[nk]
+        #settings['ylims'] = ylims[nk]
         settings['ylab'] = k[1]
         legplotlist =[]
         target_els = ['W','CO','C']
@@ -126,7 +120,7 @@ def all_plotter(DIR1, DIRs):
         legplotlist = np.array(legplotlist).ravel()
         ax.legend(legplotlist, fontsize = settings['legF'],loc=4)
         ax.set_xlim(settings['xlims'])
-        ax.set_ylim(settings['ylims'])
+        #ax.set_ylim(settings['ylims'])
         #ax.set_title(settings['title'])
         ax.set_ylabel(settings['ylab'], fontsize = settings['labF'])
         ax.set_xlabel(settings['xlab'], fontsize = settings['labF'])
@@ -136,15 +130,9 @@ def all_plotter(DIR1, DIRs):
         [x.set_linewidth(settings["boxLW"]) for x in ax.spines.values()]
         plt.savefig(settings['filename'],dpi=200, bbox_inches ='tight')
 #*********************************************************************************************
-DIR1 = '/Volumes/exFAT/LUND/WC15Co-Ti64-200um200um/'
-DIR2 =["DONE-1000C", "DONE-1200C", "DONE-1300C"]    
+DIR1 = '/Volumes/exFAT/LUND/PCD/'
+DIR2 =["DONE-1000C", "DONE-1200C"]    
 DIRs = [DIR1+d+'/' for d in DIR2]
-#for DIR in DIRs:
-#    for files in os.listdir(DIR):
-#        if files.endswith('.pickle') :
-#            [single_plotter(DIR1, DIR, filename) for filename in files.split("\n") if "uncorrected" not in filename]
-#        else:
-#            continue
-all_plotter(DIR1, DIRs)
+all_GMX_plotter(DIR1, DIRs)
 
 
