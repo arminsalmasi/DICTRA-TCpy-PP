@@ -90,11 +90,13 @@ def get_path():
 def get_timeStamp(times,timeflag):
     '''timeflag: 'first', 'last', number(float or int)'''
     if timeflag == "first":
-        tS = 0
+        tS = 1
+        print(tS)
         nearestTime = times[1]
     elif timeflag == "last":
         tS = len(times)-1
         nearestTime = times[-1]
+        print(tS)
     elif (type(timeflag) == int or type(timeflag) == float) and timeflag>0 and timeflag <times[-1]:
         tS=timeflag
         _, nearestTime=find_nearest(times, tS)

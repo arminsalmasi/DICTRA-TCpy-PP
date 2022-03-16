@@ -19,6 +19,10 @@ def main(path):
     with open("settings.json", "r") as f:
         settings = json.load(f)
     
+    if settings['actions']['delPNGs']:
+        del_pngs_pdf(path)
+        [del_pngs_pdf(path+dir+'/') for dir in settings['dirList']] 
+
     if settings['actions']['read']:
         [data_reader(path+dir,settings) for dir in settings['dirList']]
             
@@ -37,6 +41,11 @@ def main(path):
     
     if settings['actions']['plotMG'] and settings['tc_setting']['mobFlag']:
         all_GMX_plotter(path, settings)
+    
+    if settings['actions']['showPlot']:
+        plt.show() 
+    else:
+        plt.close('all')
 
 if __name__ == "__main__":
-    main('/Volumes/exFAT/LUND/PCD/')
+    main('/Volumes/exFAT/LUND/PcBN/')
