@@ -1,51 +1,36 @@
 #!/usr/bin/env python
-# coding: utf-8
+import argparse
+import sys
+from pathlib import Path
+from dictra_analyzr.pipeline import DictraPipeline
 
-import json
+def main():
+    parser = argparse.ArgumentParser(description="Dictra Data Analysis Pipeline")
+    parser.add_argument("path", nargs='?', default=".", help="Base directory containing data and settings.json")
+    parser.add_argument("--config", default="settings.json", help="Configuration file name (default: settings.json)")
+    
+    args = parser.parse_args()
+    
+    base_path = Path(args.path).resolve()
+    config_path = base_path / args.config
+    
+    if not base_path.exists():
+        print(f"Error: Path {base_path} does not exist.")
+        sys.exit(1)
 
-from calculator import *
-from correcting import *
-from plotter import *
-from datareader import *
-import os
+    if not config_path.exists():
+        print(f"Error: Configuration file {config_path} not found.")
+        print("Please ensure settings.json exists in the target directory.")
+        sys.exit(1)
 
-
-def main(path):
-    plt.close('all')
-    
-    os.chdir(path)
-    print(os.getcwd())
-    
-    with open("settings.json", "r") as f:
-        settings = json.load(f)
-    
-    if settings['actions']['delPNGs']:
-        del_pngs_pdf(path)
-        [del_pngs_pdf(path+dir+'/') for dir in settings['dirList']] 
-
-    if settings['actions']['read']:
-        [data_reader(path+dir,settings) for dir in settings['dirList']]
-            
-
-    if settings['actions']['calc']:
-        [calculator(path+dir+'/',settings) for dir in settings['dirList']]
-            
-    if settings['actions']['value_correction']:
-        [value_correction(path+dir+'/', settings) for dir in settings['dirList']]
-    
-    if settings['actions']['plot']:
-        [single_plotter(path+dir+'/', settings) for dir in settings['dirList']] 
-    
-    if settings['actions']['plotoverlaid']:
-        [ol_plotter(path+dir+'/', settings) for dir in settings['dirList']]
-    
-    if settings['actions']['plotMG'] and settings['tc_setting']['mobFlag']:
-        all_GMX_plotter(path, settings)
-    
-    if settings['actions']['showPlot']:
-        plt.show() 
-    else:
-        plt.close('all')
+    try:
+        pipeline = DictraPipeline(str(config_path), str(base_path))
+        pipeline.run()
+    except Exception as e:
+        print(f"Pipeline failed: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
 
 if __name__ == "__main__":
-    main('/Volumes/exFAT/LUND/PcBN/')
+    main()
