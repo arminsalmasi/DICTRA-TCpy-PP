@@ -141,7 +141,7 @@ class ResultCorrector:
     def add_compSets(self, dict_in):
         """Sum up split phases (miscibility gaps) e.g. Phase#1 + Phase#2."""
         d = copy.deepcopy(dict_in)
-        npms_dict = d['CQT_tS_TC_NEAT_npms']
+        npms_dict = copy.deepcopy(d['CQT_tS_TC_NEAT_npms'])
         keys = list(npms_dict.keys())
 
         # Merge numbered duplicates (e.g. BCC#1, BCC#2 -> BCC#1)
@@ -181,8 +181,10 @@ class ResultCorrector:
         """Rename phases based on mapping."""
         d = copy.deepcopy(dict_in)
         name_pairs = d['name_pairs']
-        # Use sum dict if available, otherwise fallback to CQT dict.
-        npms_dict = d.get('sum_CQT_tS_TC_NEAT_npms', d.get('CQT_tS_TC_NEAT_npms'))
+
+        # Use sum_CQT_tS_TC_NEAT_npms if available, otherwise fallback to CQT_tS_TC_NEAT_npms
+        source_key = 'sum_CQT_tS_TC_NEAT_npms' if 'sum_CQT_tS_TC_NEAT_npms' in d else 'CQT_tS_TC_NEAT_npms'
+        npms_dict = copy.deepcopy(d[source_key])
 
         for name_from, name_to in name_pairs:
             if name_from in npms_dict:
