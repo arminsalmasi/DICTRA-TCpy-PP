@@ -6,6 +6,7 @@ from collections import defaultdict
 import numpy as np
 from pathlib import Path
 from .config import Config
+from .safe_io import load_data, save_data
 
 try:
     from tc_python import TCPython

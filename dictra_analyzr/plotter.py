@@ -1,12 +1,11 @@
-import os
-from .serialization import load_data
-import glob
+import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from .config import Config, PlotSettings
+from .secure_io import secure_load
 
 class Plotter:
     def __init__(self, base_path: Path):
@@ -42,7 +41,7 @@ class Plotter:
             if not input_file.exists(): continue
 
             print(f'>>>>>> plotting tstp {tflag} from {path}')
-            data = load_data(input_file)
+            data = secure_load(input_file)
 
             settings = config.plot_settings
             # Use data-derived xlims if not provided
@@ -52,8 +51,8 @@ class Plotter:
             # Define plot tasks
             # Each task: (key_in_data, Y-label, legend_key)
             tasks_arrays = [
-                ('tS_DICT_ufs', '$U \: fraction$', 'elnames'),
-                ('tS_DICT_mfs', '$Mole \: Fraction$' ,'elnames')
+                ('tS_DICT_ufs', r'$U \: fraction$', 'elnames'),
+                ('tS_DICT_mfs', r'$Mole \: Fraction$' ,'elnames')
             ]
 
             for key, ylab, leg_key in tasks_arrays:
@@ -69,8 +68,8 @@ class Plotter:
                 )
 
             tasks_dicts = [
-                ('tS_TC_ws', '$Mass \:Fraction$'),
-                ('nameChanged_CQT_tS_TC_NEAT_npms', '$Phase \: Fraction$')
+                ('tS_TC_ws', r'$Mass \:Fraction$'),
+                ('nameChanged_CQT_tS_TC_NEAT_npms', r'$Phase \: Fraction$')
             ]
 
             for key, ylab in tasks_dicts:
@@ -92,7 +91,7 @@ class Plotter:
                     legend=settings.acSERleg,
                     title=str(path),
                     filename=path / f"tS_TC_acSER_{int(data['nearestTime'])}",
-                    ylab="$Log_{10}(Activity) \: (SER)$",
+                    ylab=r"$Log_{10}(Activity) \: (SER)$",
                     xlims=xlims,
                     settings=settings
                 )
@@ -106,7 +105,7 @@ class Plotter:
         for tflag in tflags:
             fpath = path / f'results_{tflag}.json'
             if fpath.exists():
-                datalist.append(load_data(fpath))
+                datalist.append(secure_load(fpath))
 
         if not datalist: return
 
@@ -120,8 +119,8 @@ class Plotter:
 
         # Overlaid Arrays
         tasks_arrays = [
-            ('tS_DICT_ufs', '$U \: fraction$', 'elnames'),
-            ('tS_DICT_mfs', '$Mole \: Fraction$' ,'elnames')
+            ('tS_DICT_ufs', r'$U \: fraction$', 'elnames'),
+            ('tS_DICT_mfs', r'$Mole \: Fraction$' ,'elnames')
         ]
 
         t_str = f"{tflags[0]}_{tflags[-1]}" if len(tflags) > 1 else str(tflags[0])
@@ -139,8 +138,8 @@ class Plotter:
 
         # Overlaid Dicts
         tasks_dicts = [
-            ('tS_TC_ws', '$Mass \: Fraction$'),
-            ('nameChanged_CQT_tS_TC_NEAT_npms', '$Phase \: Fraction$')
+            ('tS_TC_ws', r'$Mass \: Fraction$'),
+            ('nameChanged_CQT_tS_TC_NEAT_npms', r'$Phase \: Fraction$')
         ]
 
         for key, ylab in tasks_dicts:
@@ -160,7 +159,7 @@ class Plotter:
                 datalist=datalist,
                 keys=['tS_pts', 'tS_TC_acSER'],
                 filename=path / f"tS_TC_acSER_{t_str}",
-                ylab="$log_{10}(Activity)\: [SER]$",
+                ylab=r"$log_{10}(Activity)\: [SER]$",
                 xlims=xlims,
                 settings=settings,
                 title=str(path),
@@ -194,7 +193,7 @@ class Plotter:
                 fpath = dir_path / 'results_last.json'
                 if not fpath.exists(): continue
 
-                data = load_data(fpath)
+                data = secure_load(fpath)
 
                 # Filter elements
                 leglist_idx = [nel for nel, el in enumerate(data['elnames']) if el in target_els]
@@ -352,7 +351,7 @@ class Plotter:
             try:
                 ax.locator_params(axis='y', nbins=settings.bins)
                 ax.locator_params(axis='x', nbins=settings.bins)
-            except: pass
+            except Exception: pass
         for x in ax.spines.values():
             x.set_linewidth(settings.boxLW)
 
