@@ -125,10 +125,7 @@ class DataLoader:
         sub_sum = np.sum(mf[:, sub_idx], axis=1)
         sub_sum[sub_sum == 0] = 1.0 # Protect against div by zero
 
-        uf = []
-        for nel, el in enumerate(elnames):
-            uf.append(mf[:, nel] / sub_sum[:])
-        return np.array(uf)
+        return (mf / sub_sum[:, np.newaxis]).T
 
     def get_tS_VLUs(self, dict_input: Dict[str, Any], tS: int, nearestTime: float) -> Dict[str, Any]:
         """Extracts values for a specific timestep."""
