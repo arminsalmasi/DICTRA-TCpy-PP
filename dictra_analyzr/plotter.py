@@ -1,4 +1,3 @@
-import os
 import pickle
 import glob
 import numpy as np
