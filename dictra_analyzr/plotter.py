@@ -1,4 +1,4 @@
-import os
+import pickle
 import glob
 from . import safe_io
 import numpy as np
