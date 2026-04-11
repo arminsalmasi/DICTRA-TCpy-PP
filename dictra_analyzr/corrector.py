@@ -1,3 +1,4 @@
+from .serialization import save_data, load_data
 import copy
 import sys
 from . import safe_io
@@ -23,7 +24,6 @@ class ResultCorrector:
                     continue
 
                 print(f">>>>>>> correcting tstp {tflag} in {dir_path}")
-                dict_in = secure_load(input_file)
                 dict_in = load_data(input_file)
 
                 # Inject config
@@ -37,7 +37,6 @@ class ResultCorrector:
                 dict_out = self.add_compSets_DICT(dict3)
 
                 secure_save(dict_out, output_file)
-                save_data(dict_out, output_file)
                 print(f"Saved corrected results to {output_file}")
 
     def correct_phase_indices(self, dict_input):
