@@ -177,7 +177,16 @@ class Plotter:
         # We need data from all directories for the "last" timestep usually, as per original code
         # Original: iterates dirs, opens results_last.json
 
-        # Prepare data structure: List of dicts? Or map of dir -> data?
+        # Prepare data structure: map of dir -> data
+        # Cache data outside of the loop to prevent repeated I/O operations
+        dir_data_cache = {}
+        for dir_name in config.dirList:
+            dir_path = path / dir_name
+            fpath = dir_path / 'results_last.pickle'
+            if fpath.exists():
+                with open(fpath, 'rb') as f:
+                    dir_data_cache[dir_name] = pickle.load(f)
+
         # Original code plots overlay of different conditions (directories).
 
         # Let's iterate Ks (G or M)
