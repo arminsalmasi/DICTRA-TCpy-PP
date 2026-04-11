@@ -1,5 +1,5 @@
 import os
-import pickle
+from . import serializer
 import sys
 import copy
 from collections import defaultdict
@@ -36,16 +36,15 @@ class ThermodynamicCalculator:
         for dir_name in config.dirList:
             dir_path = self.base_path / dir_name
             for timeflag in config.timeflags:
-                input_file = dir_path / f'rawdata_{timeflag}.pickle'
-                output_file = dir_path / f'uncorrected_results_{timeflag}.pickle'
+                input_file = dir_path / f'rawdata_{timeflag}.json'
+                output_file = dir_path / f'uncorrected_results_{timeflag}.json'
 
                 if not input_file.exists():
                     print(f"Skipping calculation for {input_file}: File not found.")
                     continue
 
                 print(f">>>>>> TCpy calculator in {dir_path} for {timeflag} tstp")
-                with open(input_file, 'rb') as f:
-                    tS_VLUs = pickle.load(f)
+                tS_VLUs = serializer.load_data(input_file)
 
                 # Inject settings
                 tS_VLUs['tc_setting'] = config.tc_setting
@@ -53,8 +52,7 @@ class ThermodynamicCalculator:
                 # Perform calculation
                 tS_tc_VLUs = self.tccalc(tS_VLUs)
 
-                with open(output_file, 'wb') as f:
-                    pickle.dump(tS_tc_VLUs, f)
+                serializer.save_data(tS_tc_VLUs, output_file)
                 print(f"Saved uncorrected results to {output_file}")
 
     def tccalc(self, dict_input):
