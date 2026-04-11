@@ -351,7 +351,7 @@ class Plotter:
             try:
                 ax.locator_params(axis='y', nbins=settings.bins)
                 ax.locator_params(axis='x', nbins=settings.bins)
-            except: pass
+            except Exception: pass
         for x in ax.spines.values():
             x.set_linewidth(settings.boxLW)
 
