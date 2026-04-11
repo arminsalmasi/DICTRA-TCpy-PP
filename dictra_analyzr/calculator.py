@@ -1,5 +1,6 @@
 import os
 import sys
+from . import safe_io
 import copy
 from collections import defaultdict
 import numpy as np
@@ -45,6 +46,7 @@ class ThermodynamicCalculator:
 
                 print(f">>>>>> TCpy calculator in {dir_path} for {timeflag} tstp")
                 tS_VLUs = load_data(input_file)
+
 
                 # Inject settings
                 tS_VLUs['tc_setting'] = config.tc_setting

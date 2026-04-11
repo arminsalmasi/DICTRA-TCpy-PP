@@ -1,5 +1,6 @@
 import copy
 import sys
+from . import safe_io
 import numpy as np
 from pathlib import Path
 from .config import Config
@@ -17,8 +18,8 @@ class ResultCorrector:
                 output_file = dir_path / f'results_{tflag}.json'
 
                 if not input_file.exists():
-                     print(f"Skipping correction for {input_file}: File not found.")
-                     continue
+                    print(f"Skipping correction for {input_file}: File not found.")
+                    continue
 
                 print(f">>>>>>> correcting tstp {tflag} in {dir_path}")
                 dict_in = load_data(input_file)
