@@ -1,6 +1,5 @@
 import os
 import pickle
-import glob
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
