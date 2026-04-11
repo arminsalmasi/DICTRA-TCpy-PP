@@ -1,5 +1,5 @@
 import os
-import pickle
+from .serialization import load_data
 import glob
 import numpy as np
 import matplotlib.pyplot as plt
@@ -37,13 +37,12 @@ class Plotter:
 
     def single_plotter(self, path: Path, config: Config):
         for tflag in config.timeflags:
-            filename = f'results_{tflag}.pickle'
+            filename = f'results_{tflag}.json'
             input_file = path / filename
             if not input_file.exists(): continue
 
             print(f'>>>>>> plotting tstp {tflag} from {path}')
-            with open(input_file, 'rb') as f:
-                data = pickle.load(f)
+            data = load_data(input_file)
 
             settings = config.plot_settings
             # Use data-derived xlims if not provided
@@ -105,10 +104,9 @@ class Plotter:
         datalist = []
         print(f'>>>>> overlaid plots in {path}')
         for tflag in tflags:
-            fpath = path / f'results_{tflag}.pickle'
+            fpath = path / f'results_{tflag}.json'
             if fpath.exists():
-                with open(fpath, 'rb') as f:
-                    datalist.append(pickle.load(f))
+                datalist.append(load_data(fpath))
 
         if not datalist: return
 
@@ -176,7 +174,7 @@ class Plotter:
         ks = settings.MPlotK
 
         # We need data from all directories for the "last" timestep usually, as per original code
-        # Original: iterates dirs, opens results_last.pickle
+        # Original: iterates dirs, opens results_last.json
 
         # Prepare data structure: List of dicts? Or map of dir -> data?
         # Original code plots overlay of different conditions (directories).
@@ -192,12 +190,11 @@ class Plotter:
 
             for i, dir_name in enumerate(config.dirList):
                 dir_path = path / dir_name
-                # Original code used 'results_last.pickle' hardcoded
-                fpath = dir_path / 'results_last.pickle'
+                # Original code used 'results_last.json' hardcoded
+                fpath = dir_path / 'results_last.json'
                 if not fpath.exists(): continue
 
-                with open(fpath, 'rb') as f:
-                    data = pickle.load(f)
+                data = load_data(fpath)
 
                 # Filter elements
                 leglist_idx = [nel for nel, el in enumerate(data['elnames']) if el in target_els]

@@ -1,6 +1,6 @@
 import os
-import pickle
 import numpy as np
+from .serialization import save_data, load_data
 from pathlib import Path
 from typing import Dict, Any, List, Tuple, Union
 import copy
@@ -26,9 +26,8 @@ class DataLoader:
                 tS, nearestTime = self.get_timestamp(rData['times'], timeflag)
                 tS_VLUs = self.get_tS_VLUs(rData, tS, nearestTime)
 
-                output_file = dir_path / f'rawdata_{timeflag}.pickle'
-                with open(output_file, 'wb') as f:
-                    pickle.dump(tS_VLUs, f)
+                output_file = dir_path / f'rawdata_{timeflag}.json'
+                save_data(tS_VLUs, output_file)
                 print(f"Saved raw data to {output_file}")
 
     def get_values_from_textfiles(self, path: Path) -> Dict[str, Any]:
