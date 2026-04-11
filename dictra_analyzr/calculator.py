@@ -1,5 +1,6 @@
 import os
 import sys
+from .secure_io import secure_load, secure_save
 from . import safe_io
 import copy
 from collections import defaultdict
@@ -45,6 +46,7 @@ class ThermodynamicCalculator:
                     continue
 
                 print(f">>>>>> TCpy calculator in {dir_path} for {timeflag} tstp")
+                tS_VLUs = secure_load(input_file)
                 tS_VLUs = load_data(input_file)
 
 
@@ -54,6 +56,7 @@ class ThermodynamicCalculator:
                 # Perform calculation
                 tS_tc_VLUs = self.tccalc(tS_VLUs)
 
+                secure_save(tS_tc_VLUs, output_file)
                 save_data(tS_tc_VLUs, output_file)
                 print(f"Saved uncorrected results to {output_file}")
 

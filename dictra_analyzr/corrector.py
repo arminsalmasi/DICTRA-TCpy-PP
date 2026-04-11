@@ -4,6 +4,7 @@ from . import safe_io
 import numpy as np
 from pathlib import Path
 from .config import Config
+from .secure_io import secure_load, secure_save
 from .safe_io import load_data, save_data
 
 class ResultCorrector:
@@ -22,6 +23,7 @@ class ResultCorrector:
                     continue
 
                 print(f">>>>>>> correcting tstp {tflag} in {dir_path}")
+                dict_in = secure_load(input_file)
                 dict_in = load_data(input_file)
 
                 # Inject config
@@ -34,6 +36,7 @@ class ResultCorrector:
                 dict3 = self.phnameChange(dict2)
                 dict_out = self.add_compSets_DICT(dict3)
 
+                secure_save(dict_out, output_file)
                 save_data(dict_out, output_file)
                 print(f"Saved corrected results to {output_file}")
 

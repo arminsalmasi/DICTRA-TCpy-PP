@@ -7,7 +7,7 @@ import pandas as pd
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from .config import Config, PlotSettings
-from .safe_io import load_data
+from .secure_io import secure_load
 
 class Plotter:
     def __init__(self, base_path: Path):
@@ -43,7 +43,7 @@ class Plotter:
             if not input_file.exists(): continue
 
             print(f'>>>>>> plotting tstp {tflag} from {path}')
-            data = load_data(input_file)
+            data = secure_load(input_file)
 
             settings = config.plot_settings
             # Use data-derived xlims if not provided
@@ -107,7 +107,7 @@ class Plotter:
         for tflag in tflags:
             fpath = path / f'results_{tflag}.json'
             if fpath.exists():
-                datalist.append(load_data(fpath))
+                datalist.append(secure_load(fpath))
 
         if not datalist: return
 
@@ -195,7 +195,7 @@ class Plotter:
                 fpath = dir_path / 'results_last.json'
                 if not fpath.exists(): continue
 
-                data = load_data(fpath)
+                data = secure_load(fpath)
 
                 # Filter elements
                 leglist_idx = [nel for nel, el in enumerate(data['elnames']) if el in target_els]
