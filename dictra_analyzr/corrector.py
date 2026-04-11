@@ -1,9 +1,11 @@
 import copy
 import sys
+from . import safe_io
 import numpy as np
 from pathlib import Path
 from .config import Config
 from .secure_io import secure_load, secure_save
+from .safe_io import load_data, save_data
 
 class ResultCorrector:
     def __init__(self, base_path: Path):
@@ -17,11 +19,12 @@ class ResultCorrector:
                 output_file = dir_path / f'results_{tflag}.json'
 
                 if not input_file.exists():
-                     print(f"Skipping correction for {input_file}: File not found.")
-                     continue
+                    print(f"Skipping correction for {input_file}: File not found.")
+                    continue
 
                 print(f">>>>>>> correcting tstp {tflag} in {dir_path}")
                 dict_in = secure_load(input_file)
+                dict_in = load_data(input_file)
 
                 # Inject config
                 dict_in['name_pairs'] = config.name_pairs
@@ -34,6 +37,7 @@ class ResultCorrector:
                 dict_out = self.add_compSets_DICT(dict3)
 
                 secure_save(dict_out, output_file)
+                save_data(dict_out, output_file)
                 print(f"Saved corrected results to {output_file}")
 
     def correct_phase_indices(self, dict_input):

@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Dict, Any, List, Tuple, Union
 import copy
 from .config import Config
+from .safe_io import save_data
 
 class DataLoader:
     def __init__(self, base_path: Union[str, Path]):

@@ -1,11 +1,13 @@
 import os
 import sys
 from .secure_io import secure_load, secure_save
+from . import safe_io
 import copy
 from collections import defaultdict
 import numpy as np
 from pathlib import Path
 from .config import Config
+from .safe_io import load_data, save_data
 
 try:
     from tc_python import TCPython
@@ -45,6 +47,8 @@ class ThermodynamicCalculator:
 
                 print(f">>>>>> TCpy calculator in {dir_path} for {timeflag} tstp")
                 tS_VLUs = secure_load(input_file)
+                tS_VLUs = load_data(input_file)
+
 
                 # Inject settings
                 tS_VLUs['tc_setting'] = config.tc_setting
@@ -53,6 +57,7 @@ class ThermodynamicCalculator:
                 tS_tc_VLUs = self.tccalc(tS_VLUs)
 
                 secure_save(tS_tc_VLUs, output_file)
+                save_data(tS_tc_VLUs, output_file)
                 print(f"Saved uncorrected results to {output_file}")
 
     def tccalc(self, dict_input):
