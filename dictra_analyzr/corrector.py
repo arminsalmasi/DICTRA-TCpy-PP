@@ -1,6 +1,6 @@
-import pickle
 import copy
 import sys
+from . import safe_io
 import numpy as np
 from pathlib import Path
 from .config import Config
@@ -13,16 +13,16 @@ class ResultCorrector:
         for dir_name in config.dirList:
             dir_path = self.base_path / dir_name
             for tflag in config.timeflags:
-                input_file = dir_path / f'uncorrected_results_{tflag}.pickle'
-                output_file = dir_path / f'results_{tflag}.pickle'
+                input_file = dir_path / f'uncorrected_results_{tflag}.json'
+                output_file = dir_path / f'results_{tflag}.json'
 
                 if not input_file.exists():
-                     print(f"Skipping correction for {input_file}: File not found.")
-                     continue
+                    print(f"Skipping correction for {input_file}: File not found.")
+                    continue
 
                 print(f">>>>>>> correcting tstp {tflag} in {dir_path}")
-                with open(input_file, 'rb') as f:
-                    dict_in = pickle.load(f)
+                with open(input_file, 'r') as f:
+                    dict_in = safe_io.safe_load(f)
 
                 # Inject config
                 dict_in['name_pairs'] = config.name_pairs
@@ -34,8 +34,8 @@ class ResultCorrector:
                 dict3 = self.phnameChange(dict2)
                 dict_out = self.add_compSets_DICT(dict3)
 
-                with open(output_file, 'wb') as f:
-                    pickle.dump(dict_out, f)
+                with open(output_file, 'w') as f:
+                    safe_io.safe_dump(dict_out, f)
                 print(f"Saved corrected results to {output_file}")
 
     def correct_phase_indices(self, dict_input):
