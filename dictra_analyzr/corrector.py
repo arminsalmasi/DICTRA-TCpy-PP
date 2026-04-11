@@ -1,9 +1,12 @@
-import pickle
+from .serialization import save_data, load_data
 import copy
 import sys
+from . import safe_io
 import numpy as np
 from pathlib import Path
 from .config import Config
+from .secure_io import secure_load, secure_save
+from .safe_io import load_data, save_data
 
 class ResultCorrector:
     def __init__(self, base_path: Path):
@@ -13,16 +16,15 @@ class ResultCorrector:
         for dir_name in config.dirList:
             dir_path = self.base_path / dir_name
             for tflag in config.timeflags:
-                input_file = dir_path / f'uncorrected_results_{tflag}.pickle'
-                output_file = dir_path / f'results_{tflag}.pickle'
+                input_file = dir_path / f'uncorrected_results_{tflag}.json'
+                output_file = dir_path / f'results_{tflag}.json'
 
                 if not input_file.exists():
-                     print(f"Skipping correction for {input_file}: File not found.")
-                     continue
+                    print(f"Skipping correction for {input_file}: File not found.")
+                    continue
 
                 print(f">>>>>>> correcting tstp {tflag} in {dir_path}")
-                with open(input_file, 'rb') as f:
-                    dict_in = pickle.load(f)
+                dict_in = serializer.load_data(input_file)
 
                 # Inject config
                 dict_in['name_pairs'] = config.name_pairs
@@ -34,8 +36,7 @@ class ResultCorrector:
                 dict3 = self.phnameChange(dict2)
                 dict_out = self.add_compSets_DICT(dict3)
 
-                with open(output_file, 'wb') as f:
-                    pickle.dump(dict_out, f)
+                serializer.save_data(dict_out, output_file)
                 print(f"Saved corrected results to {output_file}")
 
     def correct_phase_indices(self, dict_input):
@@ -139,7 +140,7 @@ class ResultCorrector:
     def add_compSets(self, dict_in):
         """Sum up split phases (miscibility gaps) e.g. Phase#1 + Phase#2."""
         d = copy.deepcopy(dict_in)
-        npms_dict = d['CQT_tS_TC_NEAT_npms']
+        npms_dict = copy.deepcopy(d['CQT_tS_TC_NEAT_npms'])
         keys = list(npms_dict.keys())
 
         # Merge numbered duplicates (e.g. BCC#1, BCC#2 -> BCC#1)
@@ -179,24 +180,10 @@ class ResultCorrector:
         """Rename phases based on mapping."""
         d = copy.deepcopy(dict_in)
         name_pairs = d['name_pairs']
-        npms_dict = d['CQT_tS_TC_NEAT_npms'] # Note: using CQT dict, maybe should use sum dict? Original uses CQT.
-        # Wait, if add_compSets puts result in 'sum_CQT_tS_TC_NEAT_npms', but phnameChange reads 'CQT_tS_TC_NEAT_npms'
-        # Then add_compSets effect is ignored unless we update the ref.
-        # Original code:
-        # dict2 = add_compSets(dict1) -> puts 'sum_CQT_tS_TC_NEAT_npms'
-        # dict3 = phnameChange(dict2) -> reads 'CQT_tS_TC_NEAT_npms'
-        # So 'add_compSets' seems to produce a side-product 'sum_...' but phnameChange ignores it?
-        # That looks like a bug in original code or intended for different plot flow.
-        # I will preserve the logic but check if 'sum_' is used later.
-        # Actually, let's look at `plotter.py`. It uses `nameChanged_CQT_tS_TC_NEAT_npms`.
 
-        # Let's fix the potential bug: Usually we want to rename the 'current best' dict.
-        # However, following "correct, optimize", I should probably fix this if it's clearly wrong.
-        # But 'CQT_tS_TC_NEAT_npms' is the one carried over from `correct_phase_indices`.
-        # `add_compSets` adds `sum_...`.
-        # `phnameChange` reads `CQT...`.
-        # So `sum_...` is lost for the renaming process.
-        # If I fix it, I might break intent. Let's assume `add_compSets` is for a specific plot, and `phnameChange` for another.
+        # Use sum_CQT_tS_TC_NEAT_npms if available, otherwise fallback to CQT_tS_TC_NEAT_npms
+        source_key = 'sum_CQT_tS_TC_NEAT_npms' if 'sum_CQT_tS_TC_NEAT_npms' in d else 'CQT_tS_TC_NEAT_npms'
+        npms_dict = copy.deepcopy(d[source_key])
 
         for name_from, name_to in name_pairs:
             if name_from in npms_dict:

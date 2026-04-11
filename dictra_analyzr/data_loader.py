@@ -1,10 +1,12 @@
 import os
-import pickle
+from . import serializer
 import numpy as np
+from .secure_io import secure_save
 from pathlib import Path
 from typing import Dict, Any, List, Tuple, Union
 import copy
 from .config import Config
+from .safe_io import save_data
 
 class DataLoader:
     def __init__(self, base_path: Union[str, Path]):
@@ -26,9 +28,8 @@ class DataLoader:
                 tS, nearestTime = self.get_timestamp(rData['times'], timeflag)
                 tS_VLUs = self.get_tS_VLUs(rData, tS, nearestTime)
 
-                output_file = dir_path / f'rawdata_{timeflag}.pickle'
-                with open(output_file, 'wb') as f:
-                    pickle.dump(tS_VLUs, f)
+                output_file = dir_path / f'rawdata_{timeflag}.json'
+                serializer.save_data(tS_VLUs, output_file)
                 print(f"Saved raw data to {output_file}")
 
     def get_values_from_textfiles(self, path: Path) -> Dict[str, Any]:
@@ -125,10 +126,7 @@ class DataLoader:
         sub_sum = np.sum(mf[:, sub_idx], axis=1)
         sub_sum[sub_sum == 0] = 1.0 # Protect against div by zero
 
-        uf = []
-        for nel, el in enumerate(elnames):
-            uf.append(mf[:, nel] / sub_sum[:])
-        return np.array(uf)
+        return (mf / sub_sum[:, np.newaxis]).T
 
     def get_tS_VLUs(self, dict_input: Dict[str, Any], tS: int, nearestTime: float) -> Dict[str, Any]:
         """Extracts values for a specific timestep."""
