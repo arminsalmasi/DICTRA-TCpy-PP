@@ -181,24 +181,8 @@ class ResultCorrector:
         """Rename phases based on mapping."""
         d = copy.deepcopy(dict_in)
         name_pairs = d['name_pairs']
-        npms_dict = d['CQT_tS_TC_NEAT_npms'] # Note: using CQT dict, maybe should use sum dict? Original uses CQT.
-        # Wait, if add_compSets puts result in 'sum_CQT_tS_TC_NEAT_npms', but phnameChange reads 'CQT_tS_TC_NEAT_npms'
-        # Then add_compSets effect is ignored unless we update the ref.
-        # Original code:
-        # dict2 = add_compSets(dict1) -> puts 'sum_CQT_tS_TC_NEAT_npms'
-        # dict3 = phnameChange(dict2) -> reads 'CQT_tS_TC_NEAT_npms'
-        # So 'add_compSets' seems to produce a side-product 'sum_...' but phnameChange ignores it?
-        # That looks like a bug in original code or intended for different plot flow.
-        # I will preserve the logic but check if 'sum_' is used later.
-        # Actually, let's look at `plotter.py`. It uses `nameChanged_CQT_tS_TC_NEAT_npms`.
-
-        # Let's fix the potential bug: Usually we want to rename the 'current best' dict.
-        # However, following "correct, optimize", I should probably fix this if it's clearly wrong.
-        # But 'CQT_tS_TC_NEAT_npms' is the one carried over from `correct_phase_indices`.
-        # `add_compSets` adds `sum_...`.
-        # `phnameChange` reads `CQT...`.
-        # So `sum_...` is lost for the renaming process.
-        # If I fix it, I might break intent. Let's assume `add_compSets` is for a specific plot, and `phnameChange` for another.
+        # Use sum dict if available, otherwise fallback to CQT dict.
+        npms_dict = d.get('sum_CQT_tS_TC_NEAT_npms', d.get('CQT_tS_TC_NEAT_npms'))
 
         for name_from, name_to in name_pairs:
             if name_from in npms_dict:
