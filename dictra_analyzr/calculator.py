@@ -47,7 +47,7 @@ class ThermodynamicCalculator:
                     continue
 
                 print(f">>>>>> TCpy calculator in {dir_path} for {timeflag} tstp")
-                tS_VLUs = load_data(input_file)
+                tS_VLUs = serializer.load_data(input_file)
 
                 # Inject settings
                 tS_VLUs['tc_setting'] = config.tc_setting
@@ -55,7 +55,7 @@ class ThermodynamicCalculator:
                 # Perform calculation
                 tS_tc_VLUs = self.tccalc(tS_VLUs)
 
-                save_data(tS_tc_VLUs, output_file)
+                serializer.save_data(tS_tc_VLUs, output_file)
                 print(f"Saved uncorrected results to {output_file}")
 
     def tccalc(self, dict_input):

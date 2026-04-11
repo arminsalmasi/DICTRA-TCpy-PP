@@ -1,4 +1,6 @@
-import pickle
+import os
+from . import serializer
+import glob
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -41,7 +43,7 @@ class Plotter:
             if not input_file.exists(): continue
 
             print(f'>>>>>> plotting tstp {tflag} from {path}')
-            data = secure_load(input_file)
+            data = serializer.load_data(input_file)
 
             settings = config.plot_settings
             # Use data-derived xlims if not provided
@@ -105,7 +107,7 @@ class Plotter:
         for tflag in tflags:
             fpath = path / f'results_{tflag}.json'
             if fpath.exists():
-                datalist.append(secure_load(fpath))
+                datalist.append(serializer.load_data(fpath))
 
         if not datalist: return
 
@@ -189,11 +191,11 @@ class Plotter:
 
             for i, dir_name in enumerate(config.dirList):
                 dir_path = path / dir_name
-                # Original code used 'results_last.json' hardcoded
+                # Original code used 'results_last.pickle' hardcoded
                 fpath = dir_path / 'results_last.json'
                 if not fpath.exists(): continue
 
-                data = secure_load(fpath)
+                data = serializer.load_data(fpath)
 
                 # Filter elements
                 leglist_idx = [nel for nel, el in enumerate(data['elnames']) if el in target_els]

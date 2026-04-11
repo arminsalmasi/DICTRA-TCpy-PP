@@ -1,4 +1,5 @@
-import pickle
+import os
+from . import serializer
 import numpy as np
 from .secure_io import secure_save
 from pathlib import Path
@@ -28,7 +29,7 @@ class DataLoader:
                 tS_VLUs = self.get_tS_VLUs(rData, tS, nearestTime)
 
                 output_file = dir_path / f'rawdata_{timeflag}.json'
-                secure_save(tS_VLUs, output_file)
+                serializer.save_data(tS_VLUs, output_file)
                 print(f"Saved raw data to {output_file}")
 
     def get_values_from_textfiles(self, path: Path) -> Dict[str, Any]:

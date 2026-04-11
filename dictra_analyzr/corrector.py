@@ -24,7 +24,7 @@ class ResultCorrector:
                     continue
 
                 print(f">>>>>>> correcting tstp {tflag} in {dir_path}")
-                dict_in = load_data(input_file)
+                dict_in = serializer.load_data(input_file)
 
                 # Inject config
                 dict_in['name_pairs'] = config.name_pairs
@@ -36,7 +36,7 @@ class ResultCorrector:
                 dict3 = self.phnameChange(dict2)
                 dict_out = self.add_compSets_DICT(dict3)
 
-                secure_save(dict_out, output_file)
+                serializer.save_data(dict_out, output_file)
                 print(f"Saved corrected results to {output_file}")
 
     def correct_phase_indices(self, dict_input):
