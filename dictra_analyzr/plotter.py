@@ -1,6 +1,6 @@
 import os
-import pickle
 import glob
+from . import safe_io
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -37,13 +37,13 @@ class Plotter:
 
     def single_plotter(self, path: Path, config: Config):
         for tflag in config.timeflags:
-            filename = f'results_{tflag}.pickle'
+            filename = f'results_{tflag}.json'
             input_file = path / filename
             if not input_file.exists(): continue
 
             print(f'>>>>>> plotting tstp {tflag} from {path}')
-            with open(input_file, 'rb') as f:
-                data = pickle.load(f)
+            with open(input_file, 'r') as f:
+                data = safe_io.safe_load(f)
 
             settings = config.plot_settings
             # Use data-derived xlims if not provided
@@ -105,10 +105,10 @@ class Plotter:
         datalist = []
         print(f'>>>>> overlaid plots in {path}')
         for tflag in tflags:
-            fpath = path / f'results_{tflag}.pickle'
+            fpath = path / f'results_{tflag}.json'
             if fpath.exists():
-                with open(fpath, 'rb') as f:
-                    datalist.append(pickle.load(f))
+                with open(fpath, 'r') as f:
+                    datalist.append(safe_io.safe_load(f))
 
         if not datalist: return
 
@@ -193,11 +193,11 @@ class Plotter:
             for i, dir_name in enumerate(config.dirList):
                 dir_path = path / dir_name
                 # Original code used 'results_last.pickle' hardcoded
-                fpath = dir_path / 'results_last.pickle'
+                fpath = dir_path / 'results_last.json'
                 if not fpath.exists(): continue
 
-                with open(fpath, 'rb') as f:
-                    data = pickle.load(f)
+                with open(fpath, 'r') as f:
+                    data = safe_io.safe_load(f)
 
                 # Filter elements
                 leglist_idx = [nel for nel, el in enumerate(data['elnames']) if el in target_els]

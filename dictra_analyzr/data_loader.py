@@ -1,10 +1,10 @@
 import os
-import pickle
 import numpy as np
 from pathlib import Path
 from typing import Dict, Any, List, Tuple, Union
 import copy
 from .config import Config
+from . import safe_io
 
 class DataLoader:
     def __init__(self, base_path: Union[str, Path]):
@@ -26,9 +26,9 @@ class DataLoader:
                 tS, nearestTime = self.get_timestamp(rData['times'], timeflag)
                 tS_VLUs = self.get_tS_VLUs(rData, tS, nearestTime)
 
-                output_file = dir_path / f'rawdata_{timeflag}.pickle'
-                with open(output_file, 'wb') as f:
-                    pickle.dump(tS_VLUs, f)
+                output_file = dir_path / f'rawdata_{timeflag}.json'
+                with open(output_file, 'w') as f:
+                    safe_io.safe_dump(tS_VLUs, f)
                 print(f"Saved raw data to {output_file}")
 
     def get_values_from_textfiles(self, path: Path) -> Dict[str, Any]:
