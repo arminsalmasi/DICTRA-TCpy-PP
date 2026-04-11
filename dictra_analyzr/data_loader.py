@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Dict, Any, List, Tuple, Union
 import copy
 from .config import Config
-from . import safe_io
+from .safe_io import save_data
 
 class DataLoader:
     def __init__(self, base_path: Union[str, Path]):
@@ -27,8 +27,7 @@ class DataLoader:
                 tS_VLUs = self.get_tS_VLUs(rData, tS, nearestTime)
 
                 output_file = dir_path / f'rawdata_{timeflag}.json'
-                with open(output_file, 'w') as f:
-                    safe_io.safe_dump(tS_VLUs, f)
+                save_data(tS_VLUs, output_file)
                 print(f"Saved raw data to {output_file}")
 
     def get_values_from_textfiles(self, path: Path) -> Dict[str, Any]:

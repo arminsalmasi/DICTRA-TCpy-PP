@@ -4,6 +4,7 @@ from . import safe_io
 import numpy as np
 from pathlib import Path
 from .config import Config
+from .safe_io import load_data, save_data
 
 class ResultCorrector:
     def __init__(self, base_path: Path):
@@ -21,8 +22,7 @@ class ResultCorrector:
                     continue
 
                 print(f">>>>>>> correcting tstp {tflag} in {dir_path}")
-                with open(input_file, 'r') as f:
-                    dict_in = safe_io.safe_load(f)
+                dict_in = load_data(input_file)
 
                 # Inject config
                 dict_in['name_pairs'] = config.name_pairs
@@ -34,8 +34,7 @@ class ResultCorrector:
                 dict3 = self.phnameChange(dict2)
                 dict_out = self.add_compSets_DICT(dict3)
 
-                with open(output_file, 'w') as f:
-                    safe_io.safe_dump(dict_out, f)
+                save_data(dict_out, output_file)
                 print(f"Saved corrected results to {output_file}")
 
     def correct_phase_indices(self, dict_input):
