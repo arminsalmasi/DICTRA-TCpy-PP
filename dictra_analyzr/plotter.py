@@ -1,4 +1,3 @@
-import os
 from . import serializer
 import glob
 import numpy as np
