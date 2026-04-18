@@ -3,6 +3,9 @@ import sys
 from unittest.mock import MagicMock
 from pathlib import Path
 
+# Mock tc_python because it is a proprietary SDK unavailable in this environment
+sys.modules['tc_python'] = MagicMock()
+
 from dictra_analyzr.corrector import ResultCorrector
 
 class MockArray:
@@ -84,6 +87,11 @@ class TestResultCorrector(unittest.TestCase):
         self.assertNotIn('AnotherPhase', new_dict)
 
         self.assertEqual(new_dict['PhaseB'], [1, 2, 3])
+
+    def test_correct_phase_indices_missing_keys(self):
+        dict_in = {}
+        result = self.corrector.correct_phase_indices(dict_in)
+        self.assertEqual(result, {})
 
 if __name__ == '__main__':
     unittest.main()
