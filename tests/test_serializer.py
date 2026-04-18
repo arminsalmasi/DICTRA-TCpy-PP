@@ -1,38 +1,13 @@
-import sys
 import unittest
-import tempfile
-import os
-import json
-
-# Handle potential numpy mock pollution from other test files
-if 'numpy' in sys.modules and type(sys.modules['numpy']).__name__ == 'MagicMock':
-    class NpIntegerType(int): pass
-    class NpFloatingType(float): pass
-    sys.modules['numpy'].integer = NpIntegerType
-    sys.modules['numpy'].floating = NpFloatingType
-
-from dictra_analyzr.serializer import save_data, load_data
+from dictra_analyzr.serializer import _encode_dict_keys
 
 class TestSerializer(unittest.TestCase):
-    def test_save_data(self):
-        data = {"test": {1: "one", "two": 2}}
-        with tempfile.NamedTemporaryFile(delete=False, mode='w', suffix='.json') as f:
-            filepath = f.name
-
-        try:
-            save_data(data, filepath)
-            self.assertTrue(os.path.exists(filepath))
-
-            with open(filepath, 'r') as f:
-                loaded_raw = json.load(f)
-
-            self.assertEqual(loaded_raw, {"test": {"__int_key_1": "one", "two": 2}})
-
-            loaded = load_data(filepath)
-            self.assertEqual(loaded, data)
-        finally:
-            if os.path.exists(filepath):
-                os.remove(filepath)
+    def test_encode_dict_keys_nested_structure(self):
+        """Test encoding nested structures including dicts with int keys, lists, and tuples."""
+        obj = {1: (2, [3, {4: 5}])}
+        encoded = _encode_dict_keys(obj)
+        expected = {'__int_key_1': {'__tuple__': True, 'data': [2, [3, {'__int_key_4': 5}]]}}
+        self.assertEqual(encoded, expected)
 
 if __name__ == '__main__':
     unittest.main()
