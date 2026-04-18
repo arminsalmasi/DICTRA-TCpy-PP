@@ -1,11 +1,10 @@
 from .serialization import save_data, load_data
 import copy
 import sys
-from . import safe_io
 import numpy as np
 from pathlib import Path
 from .config import Config
-from .secure_io import secure_load, secure_save
+from .secure_io import secure_save
 from .safe_io import load_data, save_data
 
 class ResultCorrector:
@@ -64,6 +63,12 @@ class ResultCorrector:
             phases_to_process = [ph for ph in tS_TC_NEAT_phnames if phase_to_change in ph]
 
             for phase in phases_to_process:
+                # Precompute search element index to avoid redundant searches in the inner loop
+                try:
+                    search_element_idx = np.where(elnames == search_element)[0][0]
+                except IndexError:
+                    continue # Search element not present?
+
                 # Iterate points
                 for pt in range(n_pts):
                     phXs = tS_TC_NEAT_phXs[phase][pt, :]
@@ -71,17 +76,43 @@ class ResultCorrector:
                         # Sort by fraction to find major elements
                         # The logic in original code seems to try to find if 'search_element' is dominant
                         sorted_indices = np.flip(np.argsort(phXs))
-                        sorted_elnames = elnames[sorted_indices]
 
-                        try:
-                            search_idx = np.where(sorted_elnames == search_element)[0][0]
-                        except IndexError:
-                            continue # Search element not present?
+                        # sorted_indices contains all indices, so search_element_idx is guaranteed to be found
+                        search_idx = np.where(sorted_indices == search_element_idx)[0][0]
 
-                        condition_met = self._check_condition_met(phXs, elnames, search_element, cutoff, search_idx)
+                        # Original logic reconstruction:
+                        # cutoff > 0 and < 1: check if search_element fraction > cutoff
+                        # cutoff == 1: check if search_element is the largest constituent (index 0)
+
+                        condition_met = False
+                        if 0 < cutoff < 1:
+                             # Wait, original code checks sorted_phXs[sorted_searchElidx] > cutoff
+                             # sorted_phXs matches sorted_elnames.
+                             # So if search_element is at index `search_idx` in `sorted_elnames`,
+                             # its value is `phXs[original_index_of_search_element]`.
+                             # The original code:
+                             # sorted_phXs = ...
+                             # sorted_searchElidx = np.where( sorted_elnames ==  search_element )[0][0]
+                             # if sorted_phXs[sorted_searchElidx] > cutoff: ...
+
+                             # Let's trust the logic: is the concentration of search_element > cutoff?
+                             current_conc = phXs[search_element_idx]
+                             if current_conc > cutoff:
+                                 condition_met = True
+
+                        elif cutoff == 1:
+                            if search_idx == 0: # It is the largest constituent
+                                if phXs[search_element_idx] > 0:
+                                    condition_met = True
 
                         if condition_met:
-                             st = self._get_new_phase_name(phase_to_change, sorted_elnames, cutoff)
+                             sorted_elnames = elnames[sorted_indices]
+                             # Generate new phase name e.g. "BCC_A2-W" if top 2 elements are W and something else?
+                             # Original code uses top 2 elements for name generation if cutoff < 1, top 1 if cutoff == 1
+                             if 0 < cutoff < 1:
+                                 st = phase_to_change + '-' + "".join(sorted_elnames[:2])
+                             else:
+                                 st = phase_to_change + '-' + "".join(sorted_elnames[:1])
 
                              # Add to new arrays
                              if st not in CQT_tS_TC_NEAT_npms:
