@@ -4,10 +4,7 @@ from unittest.mock import MagicMock
 from pathlib import Path
 
 # Mock numpy before importing dictra_analyzr
-try:
-    import numpy
-except ImportError:
-    sys.modules["numpy"] = MagicMock()
+# sys.modules['numpy'] = MagicMock()
 
 from dictra_analyzr.corrector import ResultCorrector
 
@@ -90,6 +87,11 @@ class TestResultCorrector(unittest.TestCase):
         self.assertNotIn('AnotherPhase', new_dict)
 
         self.assertEqual(new_dict['PhaseB'], [1, 2, 3])
+
+    def test_correct_phase_indices_missing_keys(self):
+        dict_in = {}
+        result = self.corrector.correct_phase_indices(dict_in)
+        self.assertEqual(result, {})
 
 if __name__ == '__main__':
     unittest.main()

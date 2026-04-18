@@ -1,13 +1,11 @@
 import os
 from . import serializer
-import glob
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from .config import Config, PlotSettings
-from .secure_io import secure_load
 
 class Plotter:
     def __init__(self, base_path: Path):
