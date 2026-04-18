@@ -1,4 +1,6 @@
 import sys
+if 'numpy' in sys.modules and type(sys.modules['numpy']).__name__ == 'MagicMock':
+    del sys.modules['numpy']
 import unittest
 from unittest.mock import MagicMock
 
