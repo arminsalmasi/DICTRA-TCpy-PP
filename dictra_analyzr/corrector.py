@@ -5,7 +5,7 @@ from . import safe_io
 import numpy as np
 from pathlib import Path
 from .config import Config
-from .secure_io import secure_load, secure_save
+from .secure_io import secure_save
 from .safe_io import load_data, save_data
 
 class ResultCorrector:
