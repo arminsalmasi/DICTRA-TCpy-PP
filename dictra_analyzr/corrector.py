@@ -55,8 +55,9 @@ class ResultCorrector:
             return d
 
         print('Correcting indices...')
-        CQT_tS_TC_NEAT_phXs = copy.deepcopy(tS_TC_NEAT_phXs)
-        CQT_tS_TC_NEAT_npms = copy.deepcopy(tS_TC_NEAT_npms)
+        # Shallow copy dicts and copy arrays to prevent mutation of the original copied `d`
+        CQT_tS_TC_NEAT_phXs = {k: v.copy() for k, v in tS_TC_NEAT_phXs.items()}
+        CQT_tS_TC_NEAT_npms = {k: v.copy() for k, v in tS_TC_NEAT_npms.items()}
 
         for change in phase_changes:
             phase_to_change, search_element, cutoff = change
@@ -140,7 +141,7 @@ class ResultCorrector:
     def add_compSets(self, dict_in):
         """Sum up split phases (miscibility gaps) e.g. Phase#1 + Phase#2."""
         d = copy.deepcopy(dict_in)
-        npms_dict = copy.deepcopy(d['CQT_tS_TC_NEAT_npms'])
+        npms_dict = d['CQT_tS_TC_NEAT_npms'].copy()
         keys = list(npms_dict.keys())
 
         # Merge numbered duplicates (e.g. BCC#1, BCC#2 -> BCC#1)
@@ -156,7 +157,7 @@ class ResultCorrector:
              for i in range(2, 10):
                  variant_key = f"{ph}#{i}"
                  if variant_key in npms_dict:
-                     npms_dict[base_key] += npms_dict[variant_key]
+                     npms_dict[base_key] = npms_dict[base_key] + npms_dict[variant_key]
                      npms_dict.pop(variant_key)
 
         # Merge same names if any left (Original code logic seems to check for sorted(key) equality?)
@@ -170,7 +171,7 @@ class ResultCorrector:
                 if key1 in npms_dict and key2 in npms_dict: # check existence as we pop
                     if sorted(key1) == sorted(key2): # This is risky if names are just anagrams
                         if key1 != key2:
-                            npms_dict[key1] += npms_dict[key2]
+                            npms_dict[key1] = npms_dict[key1] + npms_dict[key2]
                             npms_dict.pop(key2)
 
         d['sum_CQT_tS_TC_NEAT_npms'] = npms_dict
@@ -183,12 +184,12 @@ class ResultCorrector:
 
         # Use sum_CQT_tS_TC_NEAT_npms if available, otherwise fallback to CQT_tS_TC_NEAT_npms
         source_key = 'sum_CQT_tS_TC_NEAT_npms' if 'sum_CQT_tS_TC_NEAT_npms' in d else 'CQT_tS_TC_NEAT_npms'
-        npms_dict = copy.deepcopy(d[source_key])
+        npms_dict = d[source_key].copy()
 
         for name_from, name_to in name_pairs:
             if name_from in npms_dict:
                 if name_to in npms_dict:
-                    npms_dict[name_to] += npms_dict[name_from]
+                    npms_dict[name_to] = npms_dict[name_to] + npms_dict[name_from]
                 else:
                     npms_dict[name_to] = npms_dict[name_from]
                 del npms_dict[name_from]
