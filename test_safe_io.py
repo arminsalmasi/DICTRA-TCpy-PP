@@ -1,5 +1,5 @@
 import sys
-import unittest.mock
+from unittest.mock import MagicMock
 
 class DummyNDArray:
     def __init__(self, lst, dtype_str):
@@ -21,7 +21,7 @@ class DummyGeneric:
 def dummy_array(lst, dtype=None):
     return DummyNDArray(lst, str(dtype) if dtype else "float64")
 
-np_mock = unittest.mock.MagicMock()
+np_mock = MagicMock()
 np_mock.ndarray = DummyNDArray
 np_mock.generic = DummyGeneric
 np_mock.array = dummy_array
