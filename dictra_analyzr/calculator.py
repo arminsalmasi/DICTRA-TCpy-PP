@@ -1,6 +1,5 @@
-import os
 import logging
-import sys
+import os
 from .serialization import save_data, load_data
 import copy
 from collections import defaultdict
@@ -8,6 +7,7 @@ import numpy as np
 from pathlib import Path
 from .config import Config
 from .safe_io import load_data, save_data
+import logging
 
 logger = logging.getLogger(__name__)
 
@@ -110,40 +110,27 @@ class ThermodynamicCalculator:
                     poly.set_condition(f"X({el})", float(mfs[pt, nel]))
 
                 try:
-                    pntEq = poly.calculate()
-                    stablePhs = pntEq.get_stable_phases()
-                    tc_phnames[pt] = stablePhs
+                    pnt_results = self._calculate_point_equilibrium(poly, elnames, acsRef, McalcFlag)
+
+                    tc_phnames[pt] = pnt_results['stablePhs']
 
                     if 'C' in elnames:
-                        for reference in acsRef:
-                            val = pntEq.get_value_of(f'ac(C, {reference})')
-                            tc_acRefs[f'ac(C, {reference})'].append(val)
+                        for reference, val in pnt_results['acRefs'].items():
+                            tc_acRefs[reference].append(val)
 
                     for el in elnames:
-                        tc_acSER[el].append(pntEq.get_value_of(f'ac({el})'))
-                        tc_mus[el].append(pntEq.get_value_of(f'mu({el})'))
-                        tc_ws[el].append(pntEq.get_value_of(f'w({el})'))
+                        tc_acSER[el].append(pnt_results['acSER'][el])
+                        tc_mus[el].append(pnt_results['mus'][el])
+                        tc_ws[el].append(pnt_results['ws'][el])
 
-                    for ph in stablePhs:
-                        tc_npms[f'{pt}, {ph}'] = pntEq.get_value_of(f'npm({ph})')
-                        tc_vpvs[f'{pt}, {ph}'] = pntEq.get_value_of(f'vpv({ph})')
+                    for ph, ph_data in pnt_results['phases'].items():
+                        tc_npms[f'{pt}, {ph}'] = ph_data['npm']
+                        tc_vpvs[f'{pt}, {ph}'] = ph_data['vpv']
+                        tc_phXs[f'{pt}, {ph}'] = ph_data['X']
 
-                        # Phase composition
-                        temp1 = []
-                        for el2 in elnames:
-                            temp1.append(pntEq.get_value_of(f'X({ph}, {el2})'))
-                        tc_phXs[f'{pt}, {ph}'] = np.array(temp1)
-
-                        # Mobility / Gibbs
                         if McalcFlag:
-                            temp2, temp3 = [], []
-                            for el2 in elnames:
-                                m_val = pntEq.get_value_of(f'M({ph}, {el2})')
-                                x_val = pntEq.get_value_of(f'X({ph}, {el2})')
-                                temp2.append(m_val)
-                                temp3.append(m_val * x_val) # Approximation? Original code: M * X
-                            tc_M[f'{pt}, {ph}'] = np.array(temp2)
-                            tc_G[f'{pt}, {ph}'] = np.array(temp3)
+                            tc_M[f'{pt}, {ph}'] = ph_data['M']
+                            tc_G[f'{pt}, {ph}'] = ph_data['G']
 
                 except Exception as e:
                     # Log error but continue
@@ -166,6 +153,54 @@ class ThermodynamicCalculator:
         self._trim_results(d, elnames, n_pts, tc_phnames, tc_npms, tc_vpvs, tc_phXs, tc_M if McalcFlag else None, tc_G if McalcFlag else None, McalcFlag)
 
         return d
+
+    def _calculate_point_equilibrium(self, poly, elnames, acsRef, McalcFlag):
+        pntEq = poly.calculate()
+        stablePhs = pntEq.get_stable_phases()
+
+        results = {
+            'stablePhs': stablePhs,
+            'acRefs': {},
+            'acSER': {},
+            'mus': {},
+            'ws': {},
+            'phases': {}
+        }
+
+        if 'C' in elnames:
+            for reference in acsRef:
+                results['acRefs'][f'ac(C, {reference})'] = pntEq.get_value_of(f'ac(C, {reference})')
+
+        for el in elnames:
+            results['acSER'][el] = pntEq.get_value_of(f'ac({el})')
+            results['mus'][el] = pntEq.get_value_of(f'mu({el})')
+            results['ws'][el] = pntEq.get_value_of(f'w({el})')
+
+        for ph in stablePhs:
+            ph_data = {
+                'npm': pntEq.get_value_of(f'npm({ph})'),
+                'vpv': pntEq.get_value_of(f'vpv({ph})'),
+                'X': None
+            }
+
+            temp1 = []
+            for el2 in elnames:
+                temp1.append(pntEq.get_value_of(f'X({ph}, {el2})'))
+            ph_data['X'] = np.array(temp1)
+
+            if McalcFlag:
+                temp2, temp3 = [], []
+                for el2 in elnames:
+                    m_val = pntEq.get_value_of(f'M({ph}, {el2})')
+                    x_val = pntEq.get_value_of(f'X({ph}, {el2})')
+                    temp2.append(m_val)
+                    temp3.append(m_val * x_val)
+                ph_data['M'] = np.array(temp2)
+                ph_data['G'] = np.array(temp3)
+
+            results['phases'][ph] = ph_data
+
+        return results
 
     def _setup_system(self, start, database, elnames, poly3Flag, McalcFlag, pth):
         if poly3Flag and os.path.isfile(f'{pth}/p.POLY3'):
@@ -220,7 +255,7 @@ class ThermodynamicCalculator:
 
         for nph, ph in enumerate(tc_NEAT_phnames):
             for pt in range(n_pts):
-                key = f'{pt}, {ph}'
+                key = (pt, ph)
                 if key in tc_npms:
                     tc_NEAT_npms[ph][pt] = tc_npms[key]
                     tc_NEAT_vpvs[ph][pt] = tc_vpvs[key]
