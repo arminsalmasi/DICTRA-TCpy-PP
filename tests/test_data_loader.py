@@ -1,6 +1,8 @@
 import sys
 import unittest
-from unittest.mock import MagicMock
+import tempfile
+from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 # Mock tc_python because it is a proprietary SDK unavailable in this environment
 sys.modules['tc_python'] = MagicMock()
@@ -44,6 +46,27 @@ class TestDataLoader(unittest.TestCase):
         np.testing.assert_allclose(result[0], expected_element1)
         np.testing.assert_allclose(result[1], expected_element2)
         np.testing.assert_allclose(result[2], expected_element3)
+
+    @patch('builtins.print')
+    def test_get_values_from_textfiles_error_path(self, mock_print):
+        """Test that get_values_from_textfiles correctly catches and re-raises exceptions."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir)
+
+            # Create an unreadable file to specifically trigger a read error in np.loadtxt
+            test_file = path / 'MOLE_FRACTIONS.TXT'
+            test_file.touch()
+            # Set permissions so the file is unreadable
+            test_file.chmod(0o000)
+
+            with self.assertRaises(Exception):
+                self.loader.get_values_from_textfiles(path)
+
+            called_args = mock_print.call_args[0][0]
+            self.assertTrue(called_args.startswith(f"Error reading text files in {path}:"))
+
+            # Reset permissions so tempfile can cleanup
+            test_file.chmod(0o666)
 
 if __name__ == '__main__':
     unittest.main()
