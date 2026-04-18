@@ -1,13 +1,10 @@
-import os
 from . import serializer
-import glob
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from .config import Config, PlotSettings
-from .secure_io import secure_load
 
 class Plotter:
     def __init__(self, base_path: Path):
@@ -98,39 +95,30 @@ class Plotter:
                     settings=settings
                 )
 
-    def ol_plotter(self, path: Path, config: Config):
-        settings = config.plot_settings
-        tflags = config.timeflags
-
+    def _load_overlaid_data(self, path: Path, tflags: List[Any]) -> List[Any]:
         datalist = []
         print(f'>>>>> overlaid plots in {path}')
         for tflag in tflags:
             fpath = path / f'results_{tflag}.json'
             if fpath.exists():
                 datalist.append(serializer.load_data(fpath))
+        return datalist
 
-        if not datalist: return
-
+    def _determine_xlims(self, datalist: List[Any], settings: PlotSettings) -> List[float]:
         if not settings.xlims:
-            # Union of limits? Original code takes min of mins and max of maxs?
-            # Original: [min(tmpxlims[0]),max(tmpxlims[1])] where tmpxlims is calculated per dataset
             all_xlims = [self.get_xlims(d) for d in datalist]
-            xlims = [min(x[0] for x in all_xlims), max(x[1] for x in all_xlims)]
-        else:
-            xlims = settings.xlims
+            return [min(x[0] for x in all_xlims), max(x[1] for x in all_xlims)]
+        return settings.xlims
 
-        # Overlaid Arrays
+    def _plot_overlaid_arrays(self, datalist: List[Any], path: Path, xlims: List[float], settings: PlotSettings, t_str: str):
         tasks_arrays = [
             ('tS_DICT_ufs', r'$U \: fraction$', 'elnames'),
-            ('tS_DICT_mfs', r'$Mole \: Fraction$' ,'elnames')
+            ('tS_DICT_mfs', r'$Mole \: Fraction$', 'elnames')
         ]
-
-        t_str = f"{tflags[0]}_{tflags[-1]}" if len(tflags) > 1 else str(tflags[0])
-
         for key, ylab, leg_key in tasks_arrays:
             self.overlaid_list_plotter(
                 datalist=datalist,
-                keys=[ 'tS_pts', key, leg_key],
+                keys=['tS_pts', key, leg_key],
                 filename=path / f"{key}_{t_str}",
                 ylab=ylab,
                 xlims=xlims,
@@ -138,14 +126,13 @@ class Plotter:
                 title=str(path)
             )
 
-        # Overlaid Dicts
+    def _plot_overlaid_dicts(self, datalist: List[Any], path: Path, xlims: List[float], settings: PlotSettings, t_str: str):
         tasks_dicts = [
             ('tS_TC_ws', r'$Mass \: Fraction$'),
             ('nameChanged_CQT_tS_TC_NEAT_npms', r'$Phase \: Fraction$')
         ]
-
         for key, ylab in tasks_dicts:
-             self.overlaid_dict_plotter(
+            self.overlaid_dict_plotter(
                 datalist=datalist,
                 keys=['tS_pts', key],
                 filename=path / f"{key}_{t_str}",
@@ -153,11 +140,11 @@ class Plotter:
                 xlims=xlims,
                 settings=settings,
                 title=str(path)
-             )
+            )
 
-        # Overlaid Logs
+    def _plot_overlaid_logs(self, datalist: List[Any], path: Path, xlims: List[float], settings: PlotSettings, t_str: str):
         if 'tS_TC_acSER' in datalist[0]:
-             self.overlaid_dict_ylog_plotter(
+            self.overlaid_dict_ylog_plotter(
                 datalist=datalist,
                 keys=['tS_pts', 'tS_TC_acSER'],
                 filename=path / f"tS_TC_acSER_{t_str}",
@@ -166,84 +153,86 @@ class Plotter:
                 settings=settings,
                 title=str(path),
                 path=path
-             )
+            )
+
+    def ol_plotter(self, path: Path, config: Config):
+        settings = config.plot_settings
+        tflags = config.timeflags
+
+        datalist = self._load_overlaid_data(path, tflags)
+        if not datalist:
+            return
+
+        xlims = self._determine_xlims(datalist, settings)
+        t_str = f"{tflags[0]}_{tflags[-1]}" if len(tflags) > 1 else str(tflags[0])
+
+        self._plot_overlaid_arrays(datalist, path, xlims, settings, t_str)
+        self._plot_overlaid_dicts(datalist, path, xlims, settings, t_str)
+        self._plot_overlaid_logs(datalist, path, xlims, settings, t_str)
 
     def all_GMX_plotter(self, path: Path, config: Config):
         settings = config.plot_settings
-        target_els = settings.MPlotlegs
-        phase = settings.MPlotPhase
         ks = settings.MPlotK
 
-        # We need data from all directories for the "last" timestep usually, as per original code
-        # Original: iterates dirs, opens results_last.json
-
-        # Prepare data structure: map of dir -> data
-        # Cache data outside of the loop to prevent repeated I/O operations
-        dir_data_cache = {}
-        for dir_name in config.dirList:
-            dir_path = path / dir_name
-            fpath = dir_path / 'results_last.pickle'
-            if fpath.exists():
-                with open(fpath, 'rb') as f:
-                    dir_data_cache[dir_name] = pickle.load(f)
-
-        # Original code plots overlay of different conditions (directories).
-
-        # Let's iterate Ks (G or M)
         for k_key, k_ylab, k_el_key in ks:
-            fig, ax = plt.subplots(1, 1, figsize=settings.figsize)
+            self._plot_overlay_for_k(path, config, k_key, k_ylab, settings)
 
-            full_legend = []
-            # Color/Marker cycle
-            markers = ["X", "P", "s", "p", "H", "h", "o", "v"]
-            colors = ['red', 'green', 'blue', 'k', 'magenta', 'cyan', 'orange', 'purple']
+    def _plot_overlay_for_k(self, path: Path, config: Config, k_key, k_ylab, settings: PlotSettings):
+        target_els = settings.MPlotlegs
+        phase = settings.MPlotPhase
+        fig, ax = plt.subplots(1, 1, figsize=settings.figsize)
 
-            for i, dir_name in enumerate(config.dirList):
-                dir_path = path / dir_name
-                # Original code used 'results_last.pickle' hardcoded
-                fpath = dir_path / 'results_last.json'
-                if not fpath.exists(): continue
+        full_legend = []
+        markers = ["X", "P", "s", "p", "H", "h", "o", "v"]
+        colors = ['red', 'green', 'blue', 'k', 'magenta', 'cyan', 'orange', 'purple']
 
-                data = serializer.load_data(fpath)
+        for i, dir_name in enumerate(config.dirList):
+            dir_path = path / dir_name
+            fpath = dir_path / 'results_last.json'
+            if not fpath.exists(): continue
 
-                # Filter elements
-                leglist_idx = [nel for nel, el in enumerate(data['elnames']) if el in target_els]
-                current_legend_els = data['elnames'][leglist_idx]
+            data = serializer.load_data(fpath)
+            marker = markers[i % len(markers)]
+            color = colors[i % len(colors)]
 
-                # Extract Data
-                # data[k_key] is a dict like {'BCC': array(shape=(n_pts, n_els))}
-                if phase not in data[k_key]: continue
+            dir_legend = self._plot_elements_for_dir(
+                ax=ax, data=data, k_key=k_key, phase=phase,
+                target_els=target_els, marker=marker, color=color, settings=settings
+            )
+            full_legend.extend(dir_legend)
 
-                y_data_full = data[k_key][phase] # (n_pts, n_els)
-                x_pts = data['tS_pts']
+        ax.legend(full_legend, fontsize=settings.legF)
+        self._decorate_ax(ax, phase, k_ylab, settings.xlab, settings.xlimsGM, settings)
 
-                # Plot specific elements
-                marker = markers[i % len(markers)]
-                color = colors[i % len(colors)]
+        filename = path / f"{k_key}_ol"
+        self._save_fig(filename, settings.xlimsGM)
+        plt.close(fig)
 
-                for j, el_idx in enumerate(leglist_idx):
-                    y_el = y_data_full[:, el_idx]
+    def _plot_elements_for_dir(self, ax, data, k_key, phase, target_els, marker, color, settings: PlotSettings):
+        leglist_idx = [nel for nel, el in enumerate(data['elnames']) if el in target_els]
+        current_legend_els = data['elnames'][leglist_idx]
 
-                    # Remove undefined logs (zeros)
-                    mask = y_el != 0
-                    if not np.any(mask): continue
+        if phase not in data[k_key]:
+            return []
 
-                    x_plot = x_pts[mask]
-                    y_plot = np.log10(y_el[mask])
+        y_data_full = data[k_key][phase]
+        x_pts = data['tS_pts']
 
-                    ax.plot(x_plot, y_plot, linewidth=settings.lineW,
-                            color=color, marker=marker, markersize=10, fillstyle='none')
+        for j, el_idx in enumerate(leglist_idx):
+            y_el = y_data_full[:, el_idx]
 
-                # Create label for this directory
-                temp_c = data.get("T", 273) - 273
-                full_legend.extend([f"{el} {temp_c}C" for el in current_legend_els])
+            # Remove undefined logs (zeros)
+            mask = y_el != 0
+            if not np.any(mask): continue
 
-            ax.legend(full_legend, fontsize=settings.legF)
-            self._decorate_ax(ax, phase, k_ylab, settings.xlab, settings.xlimsGM, settings)
+            x_plot = x_pts[mask]
+            y_plot = np.log10(y_el[mask])
 
-            filename = path / f"{k_key}_ol"
-            self._save_fig(filename, settings.xlimsGM)
-            plt.close(fig)
+            ax.plot(x_plot, y_plot, linewidth=settings.lineW,
+                    color=color, marker=marker, markersize=10, fillstyle='none')
+
+        temp_c = data.get("T", 273) - 273
+        return [f"{el} {temp_c}C" for el in current_legend_els]
 
     # --- Plotting Primitives ---
 
