@@ -3,8 +3,9 @@ import sys
 from unittest.mock import MagicMock
 from pathlib import Path
 
-# Mock numpy before importing dictra_analyzr
-sys.modules['numpy'] = MagicMock()
+# We no longer mock numpy globally here because it breaks test_data_loader.py which requires real numpy
+# But we mock tc_python
+sys.modules['tc_python'] = MagicMock()
 
 from dictra_analyzr.corrector import ResultCorrector
 
