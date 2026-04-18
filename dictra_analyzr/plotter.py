@@ -96,39 +96,30 @@ class Plotter:
                     settings=settings
                 )
 
-    def ol_plotter(self, path: Path, config: Config):
-        settings = config.plot_settings
-        tflags = config.timeflags
-
+    def _load_overlaid_data(self, path: Path, tflags: List[Any]) -> List[Any]:
         datalist = []
         print(f'>>>>> overlaid plots in {path}')
         for tflag in tflags:
             fpath = path / f'results_{tflag}.json'
             if fpath.exists():
                 datalist.append(serializer.load_data(fpath))
+        return datalist
 
-        if not datalist: return
-
+    def _determine_xlims(self, datalist: List[Any], settings: PlotSettings) -> List[float]:
         if not settings.xlims:
-            # Union of limits? Original code takes min of mins and max of maxs?
-            # Original: [min(tmpxlims[0]),max(tmpxlims[1])] where tmpxlims is calculated per dataset
             all_xlims = [self.get_xlims(d) for d in datalist]
-            xlims = [min(x[0] for x in all_xlims), max(x[1] for x in all_xlims)]
-        else:
-            xlims = settings.xlims
+            return [min(x[0] for x in all_xlims), max(x[1] for x in all_xlims)]
+        return settings.xlims
 
-        # Overlaid Arrays
+    def _plot_overlaid_arrays(self, datalist: List[Any], path: Path, xlims: List[float], settings: PlotSettings, t_str: str):
         tasks_arrays = [
             ('tS_DICT_ufs', r'$U \: fraction$', 'elnames'),
-            ('tS_DICT_mfs', r'$Mole \: Fraction$' ,'elnames')
+            ('tS_DICT_mfs', r'$Mole \: Fraction$', 'elnames')
         ]
-
-        t_str = f"{tflags[0]}_{tflags[-1]}" if len(tflags) > 1 else str(tflags[0])
-
         for key, ylab, leg_key in tasks_arrays:
             self.overlaid_list_plotter(
                 datalist=datalist,
-                keys=[ 'tS_pts', key, leg_key],
+                keys=['tS_pts', key, leg_key],
                 filename=path / f"{key}_{t_str}",
                 ylab=ylab,
                 xlims=xlims,
@@ -136,14 +127,13 @@ class Plotter:
                 title=str(path)
             )
 
-        # Overlaid Dicts
+    def _plot_overlaid_dicts(self, datalist: List[Any], path: Path, xlims: List[float], settings: PlotSettings, t_str: str):
         tasks_dicts = [
             ('tS_TC_ws', r'$Mass \: Fraction$'),
             ('nameChanged_CQT_tS_TC_NEAT_npms', r'$Phase \: Fraction$')
         ]
-
         for key, ylab in tasks_dicts:
-             self.overlaid_dict_plotter(
+            self.overlaid_dict_plotter(
                 datalist=datalist,
                 keys=['tS_pts', key],
                 filename=path / f"{key}_{t_str}",
@@ -151,11 +141,11 @@ class Plotter:
                 xlims=xlims,
                 settings=settings,
                 title=str(path)
-             )
+            )
 
-        # Overlaid Logs
+    def _plot_overlaid_logs(self, datalist: List[Any], path: Path, xlims: List[float], settings: PlotSettings, t_str: str):
         if 'tS_TC_acSER' in datalist[0]:
-             self.overlaid_dict_ylog_plotter(
+            self.overlaid_dict_ylog_plotter(
                 datalist=datalist,
                 keys=['tS_pts', 'tS_TC_acSER'],
                 filename=path / f"tS_TC_acSER_{t_str}",
@@ -164,7 +154,22 @@ class Plotter:
                 settings=settings,
                 title=str(path),
                 path=path
-             )
+            )
+
+    def ol_plotter(self, path: Path, config: Config):
+        settings = config.plot_settings
+        tflags = config.timeflags
+
+        datalist = self._load_overlaid_data(path, tflags)
+        if not datalist:
+            return
+
+        xlims = self._determine_xlims(datalist, settings)
+        t_str = f"{tflags[0]}_{tflags[-1]}" if len(tflags) > 1 else str(tflags[0])
+
+        self._plot_overlaid_arrays(datalist, path, xlims, settings, t_str)
+        self._plot_overlaid_dicts(datalist, path, xlims, settings, t_str)
+        self._plot_overlaid_logs(datalist, path, xlims, settings, t_str)
 
     def all_GMX_plotter(self, path: Path, config: Config):
         settings = config.plot_settings
