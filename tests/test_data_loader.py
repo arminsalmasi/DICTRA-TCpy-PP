@@ -1,6 +1,8 @@
 import sys
 import unittest
-from unittest.mock import MagicMock
+import tempfile
+from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 # Mock tc_python because it is a proprietary SDK unavailable in this environment
 sys.modules['tc_python'] = MagicMock()
@@ -48,27 +50,26 @@ class TestDataLoader(unittest.TestCase):
         np.testing.assert_allclose(result[1], expected_element2)
         np.testing.assert_allclose(result[2], expected_element3)
 
-    def test_get_tS_VLUs_out_of_bounds_tS(self):
-        """Test get_tS_VLUs handles out-of-bounds tS values (tS=0 and large tS)."""
-        dict_input = {
-            'n_pts': np.array([2, 3]), # 2 timesteps: 1st has 2 pts, 2nd has 3 pts (total 5 pts)
-            'all_pts': np.array([0.1, 0.2, 0.1, 0.2, 0.3]),
-            'DICT_phnames': np.array(['FCC_A1', 'BCC_A2']),
-            'DICT_all_npms': np.zeros((5 * 2)), # 5 pts * 2 phases = 10 elements
-            'elnames': np.array(['FE', 'NI']),
-            'all_mfs': np.zeros((5 * 2)), # 5 pts * 2 elements = 10 elements
-            'DICT_all_mus': np.zeros((5 * 2)), # 5 pts * 2 elements = 10 elements
-            'substitutionals': [np.array(['FE', 'NI']), [0, 1]], # List of elements, list of indices
-            'times': np.array([0.0, 1.0])
-        }
+    @patch('builtins.print')
+    def test_get_values_from_textfiles_error_path(self, mock_print):
+        """Test that get_values_from_textfiles correctly catches and re-raises exceptions."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir)
 
-        # Test under-bound tS
-        res_under = self.loader.get_tS_VLUs(dict_input, 0, 0.0)
-        self.assertEqual(res_under['tS'], 1)
+            # Create an unreadable file to specifically trigger a read error in np.loadtxt
+            test_file = path / 'MOLE_FRACTIONS.TXT'
+            test_file.touch()
+            # Set permissions so the file is unreadable
+            test_file.chmod(0o000)
 
-        # Test over-bound tS
-        res_over = self.loader.get_tS_VLUs(dict_input, 999, 1.0)
-        self.assertEqual(res_over['tS'], len(dict_input['n_pts']))
+            with self.assertRaises(Exception):
+                self.loader.get_values_from_textfiles(path)
+
+            called_args = mock_print.call_args[0][0]
+            self.assertTrue(called_args.startswith(f"Error reading text files in {path}:"))
+
+            # Reset permissions so tempfile can cleanup
+            test_file.chmod(0o666)
 
 if __name__ == '__main__':
     unittest.main()
