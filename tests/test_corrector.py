@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 from pathlib import Path
 
 # Mock numpy before importing dictra_analyzr
-sys.modules['numpy'] = MagicMock()
+#sys.modules['numpy'] = MagicMock()
 
 from dictra_analyzr.corrector import ResultCorrector
 
