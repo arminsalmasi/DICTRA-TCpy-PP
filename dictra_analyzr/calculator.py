@@ -7,6 +7,7 @@ import numpy as np
 from pathlib import Path
 from .config import Config
 from .safe_io import load_data, save_data
+import logging
 
 logger = logging.getLogger(__name__)
 
@@ -124,14 +125,15 @@ class ThermodynamicCalculator:
                         tc_ws[el].append(pntEq.get_value_of(f'w({el})'))
 
                     for ph in stablePhs:
-                        tc_npms[f'{pt}, {ph}'] = pntEq.get_value_of(f'npm({ph})')
-                        tc_vpvs[f'{pt}, {ph}'] = pntEq.get_value_of(f'vpv({ph})')
+                        key = (pt, ph)
+                        tc_npms[key] = pntEq.get_value_of(f'npm({ph})')
+                        tc_vpvs[key] = pntEq.get_value_of(f'vpv({ph})')
 
                         # Phase composition
                         temp1 = []
                         for el2 in elnames:
                             temp1.append(pntEq.get_value_of(f'X({ph}, {el2})'))
-                        tc_phXs[f'{pt}, {ph}'] = np.array(temp1)
+                        tc_phXs[key] = np.array(temp1)
 
                         # Mobility / Gibbs
                         if McalcFlag:
@@ -141,8 +143,8 @@ class ThermodynamicCalculator:
                                 x_val = pntEq.get_value_of(f'X({ph}, {el2})')
                                 temp2.append(m_val)
                                 temp3.append(m_val * x_val) # Approximation? Original code: M * X
-                            tc_M[f'{pt}, {ph}'] = np.array(temp2)
-                            tc_G[f'{pt}, {ph}'] = np.array(temp3)
+                            tc_M[key] = np.array(temp2)
+                            tc_G[key] = np.array(temp3)
 
                 except Exception as e:
                     # Log error but continue
@@ -219,7 +221,7 @@ class ThermodynamicCalculator:
 
         for nph, ph in enumerate(tc_NEAT_phnames):
             for pt in range(n_pts):
-                key = f'{pt}, {ph}'
+                key = (pt, ph)
                 if key in tc_npms:
                     tc_NEAT_npms[ph][pt] = tc_npms[key]
                     tc_NEAT_vpvs[ph][pt] = tc_vpvs[key]
