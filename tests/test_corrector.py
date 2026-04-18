@@ -3,18 +3,11 @@ import sys
 from unittest.mock import MagicMock
 from pathlib import Path
 
-# Mock numpy before importing dictra_analyzr
-sys.modules['numpy'] = MagicMock()
+# Mock tc_python because it is a proprietary SDK unavailable in this environment
+sys.modules['tc_python'] = MagicMock()
 
+import numpy as np
 from dictra_analyzr.corrector import ResultCorrector
-
-class MockArray:
-    def __init__(self, vals):
-        self.vals = vals
-    def __add__(self, other):
-        return MockArray([a + b for a, b in zip(self.vals, other.vals)])
-    def __eq__(self, other):
-        return self.vals == other.vals
 
 class TestResultCorrector(unittest.TestCase):
     def setUp(self):
@@ -54,8 +47,8 @@ class TestResultCorrector(unittest.TestCase):
         dict_in = {
             'name_pairs': [('PhaseA', 'PhaseB')],
             'CQT_tS_TC_NEAT_npms': {
-                'PhaseA': MockArray([1, 2, 3]),
-                'PhaseB': MockArray([4, 5, 6])
+                'PhaseA': np.array([1, 2, 3]),
+                'PhaseB': np.array([4, 5, 6])
             }
         }
 
@@ -66,7 +59,7 @@ class TestResultCorrector(unittest.TestCase):
         self.assertIn('PhaseB', new_dict)
 
         # 4. Values are summed if target exists
-        self.assertEqual(new_dict['PhaseB'].vals, [5, 7, 9])
+        np.testing.assert_array_equal(new_dict['PhaseB'], np.array([5, 7, 9]))
 
     def test_phnameChange_missing_source(self):
         dict_in = {
@@ -87,6 +80,11 @@ class TestResultCorrector(unittest.TestCase):
         self.assertNotIn('AnotherPhase', new_dict)
 
         self.assertEqual(new_dict['PhaseB'], [1, 2, 3])
+
+    def test_correct_phase_indices_missing_keys(self):
+        dict_in = {}
+        result = self.corrector.correct_phase_indices(dict_in)
+        self.assertEqual(result, {})
 
 if __name__ == '__main__':
     unittest.main()
