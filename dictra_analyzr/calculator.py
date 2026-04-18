@@ -255,7 +255,7 @@ class ThermodynamicCalculator:
 
         for nph, ph in enumerate(tc_NEAT_phnames):
             for pt in range(n_pts):
-                key = f'{pt}, {ph}'
+                key = (pt, ph)
                 if key in tc_npms:
                     tc_NEAT_npms[ph][pt] = tc_npms[key]
                     tc_NEAT_vpvs[ph][pt] = tc_vpvs[key]
