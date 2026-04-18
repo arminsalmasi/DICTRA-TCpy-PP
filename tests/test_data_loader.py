@@ -45,5 +45,15 @@ class TestDataLoader(unittest.TestCase):
         np.testing.assert_allclose(result[1], expected_element2)
         np.testing.assert_allclose(result[2], expected_element3)
 
+    def test_get_timestamp_invalid_timeflag(self):
+        """Test that get_timestamp falls back to the last element when given an invalid timeflag."""
+        times = np.array([0.0, 1.0, 2.0, 3.0, 4.0])
+        timeflag = "invalid"
+
+        tS, nearestTime = self.loader.get_timestamp(times, timeflag)
+
+        self.assertEqual(tS, 4)
+        self.assertEqual(nearestTime, 4.0)
+
 if __name__ == '__main__':
     unittest.main()
