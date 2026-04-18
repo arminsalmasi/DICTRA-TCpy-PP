@@ -3,8 +3,8 @@ import sys
 from unittest.mock import MagicMock
 from pathlib import Path
 
-# Mock numpy before importing dictra_analyzr
-#sys.modules['numpy'] = MagicMock()
+# Mock tc_python because it is a proprietary SDK unavailable in this environment
+sys.modules['tc_python'] = MagicMock()
 
 from dictra_analyzr.corrector import ResultCorrector
 
