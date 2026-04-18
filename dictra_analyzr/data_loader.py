@@ -1,4 +1,3 @@
-import os
 from . import serializer
 import numpy as np
 from .secure_io import secure_save
