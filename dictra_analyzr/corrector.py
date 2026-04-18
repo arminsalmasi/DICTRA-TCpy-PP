@@ -1,11 +1,10 @@
 from .serialization import save_data, load_data
 import copy
 import sys
-from . import safe_io
 import numpy as np
 from pathlib import Path
 from .config import Config
-from .secure_io import secure_load
+from .secure_io import secure_save
 from .safe_io import load_data, save_data
 
 class ResultCorrector:
@@ -64,6 +63,12 @@ class ResultCorrector:
             phases_to_process = [ph for ph in tS_TC_NEAT_phnames if phase_to_change in ph]
 
             for phase in phases_to_process:
+                # Precompute search element index to avoid redundant searches in the inner loop
+                try:
+                    search_element_idx = np.where(elnames == search_element)[0][0]
+                except IndexError:
+                    continue # Search element not present?
+
                 # Iterate points
                 for pt in range(n_pts):
                     phXs = tS_TC_NEAT_phXs[phase][pt, :]
@@ -71,12 +76,9 @@ class ResultCorrector:
                         # Sort by fraction to find major elements
                         # The logic in original code seems to try to find if 'search_element' is dominant
                         sorted_indices = np.flip(np.argsort(phXs))
-                        sorted_elnames = elnames[sorted_indices]
 
-                        try:
-                            search_idx = np.where(sorted_elnames == search_element)[0][0]
-                        except IndexError:
-                            continue # Search element not present?
+                        # sorted_indices contains all indices, so search_element_idx is guaranteed to be found
+                        search_idx = np.where(sorted_indices == search_element_idx)[0][0]
 
                         # Original logic reconstruction:
                         # cutoff > 0 and < 1: check if search_element fraction > cutoff
@@ -94,16 +96,17 @@ class ResultCorrector:
                              # if sorted_phXs[sorted_searchElidx] > cutoff: ...
 
                              # Let's trust the logic: is the concentration of search_element > cutoff?
-                             current_conc = phXs[np.where(elnames == search_element)[0][0]]
+                             current_conc = phXs[search_element_idx]
                              if current_conc > cutoff:
                                  condition_met = True
 
                         elif cutoff == 1:
                             if search_idx == 0: # It is the largest constituent
-                                if phXs[np.where(elnames == search_element)[0][0]] > 0:
+                                if phXs[search_element_idx] > 0:
                                     condition_met = True
 
                         if condition_met:
+                             sorted_elnames = elnames[sorted_indices]
                              # Generate new phase name e.g. "BCC_A2-W" if top 2 elements are W and something else?
                              # Original code uses top 2 elements for name generation if cutoff < 1, top 1 if cutoff == 1
                              if 0 < cutoff < 1:
@@ -126,7 +129,29 @@ class ResultCorrector:
         d['CQT_tS_TC_NEAT_phXs'] = CQT_tS_TC_NEAT_phXs
         d['CQT_tS_TC_NEAT_npms'] = CQT_tS_TC_NEAT_npms
 
-        # Clean up empty phases
+        self._cleanup_empty_phases(d)
+
+        return d
+
+    def _check_condition_met(self, phXs, elnames, search_element, cutoff, search_idx):
+        condition_met = False
+        if 0 < cutoff < 1:
+            current_conc = phXs[np.where(elnames == search_element)[0][0]]
+            if current_conc > cutoff:
+                condition_met = True
+        elif cutoff == 1:
+            if search_idx == 0:
+                if phXs[np.where(elnames == search_element)[0][0]] > 0:
+                    condition_met = True
+        return condition_met
+
+    def _get_new_phase_name(self, phase_to_change, sorted_elnames, cutoff):
+        if 0 < cutoff < 1:
+            return phase_to_change + '-' + "".join(sorted_elnames[:2])
+        else:
+            return phase_to_change + '-' + "".join(sorted_elnames[:1])
+
+    def _cleanup_empty_phases(self, d):
         keys_to_remove = [k for k, v in d['CQT_tS_TC_NEAT_npms'].items() if np.all(v < 1e-4)]
         for k in keys_to_remove:
             d['CQT_tS_TC_NEAT_npms'].pop(k, None)
@@ -134,8 +159,6 @@ class ResultCorrector:
         keys_to_remove = [k for k, v in d['CQT_tS_TC_NEAT_phXs'].items() if np.all(v.ravel() == 0)]
         for k in keys_to_remove:
             d['CQT_tS_TC_NEAT_phXs'].pop(k, None)
-
-        return d
 
     def add_compSets(self, dict_in):
         """Sum up split phases (miscibility gaps) e.g. Phase#1 + Phase#2."""
