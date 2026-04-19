@@ -21,7 +21,6 @@ class TestDataLoader(unittest.TestCase):
     def test_calculate_u_fractions_zero_division_protection(self):
         """Test that division by zero is avoided when calculating u-fractions.
         Verifies behavior with actual numpy evaluation."""
-        import numpy as np
         if isinstance(np, MagicMock):
             # Skip logic if numpy is not actually available
             return

@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 
 # Mock numpy before importing dictra_analyzr
+sys.modules['numpy'] = np
 
 from dictra_analyzr.corrector import ResultCorrector
 
