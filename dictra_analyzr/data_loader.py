@@ -64,14 +64,13 @@ class DataLoader:
         return data
 
     def _categorize_elements(self, elnames: np.ndarray) -> Tuple[List[Any], List[Any]]:
-        interstitial_list = ['N', 'C', 'H', 'O', 'VA']
+        interstitial_set = {'N', 'C', 'H', 'O', 'VA'}
         int_idx = []
         sub_idx = list(range(len(elnames)))
 
         found_interstitials = []
-        for el in interstitial_list:
-            if el in elnames:
-                idx = np.where(elnames == el)[0][0]
+        for idx, el in enumerate(elnames):
+            if el in interstitial_set:
                 int_idx.append(idx)
                 found_interstitials.append(el)
 
