@@ -1,6 +1,12 @@
 import os
+import sys
 import unittest
 import tempfile
+from unittest.mock import MagicMock
+
+if 'numpy' in sys.modules and isinstance(sys.modules['numpy'], MagicMock):
+    del sys.modules['numpy']
+
 import numpy as np
 
 from dictra_analyzr.secure_io import secure_load, secure_save
