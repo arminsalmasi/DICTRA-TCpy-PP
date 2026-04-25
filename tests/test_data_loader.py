@@ -1,6 +1,7 @@
 import sys
 if 'numpy' in sys.modules and type(sys.modules['numpy']).__name__ == 'MagicMock':
     del sys.modules['numpy']
+import numpy as np
 import unittest
 import tempfile
 from pathlib import Path
@@ -49,6 +50,31 @@ class TestDataLoader(unittest.TestCase):
         expected_element1 = np.array([0.5, 0.0, 1.0])
         expected_element2 = np.array([0.5, 0.0, 0.0])
         expected_element3 = np.array([0.25, 0.5, 0.5])
+
+        np.testing.assert_allclose(result[0], expected_element1)
+        np.testing.assert_allclose(result[1], expected_element2)
+        np.testing.assert_allclose(result[2], expected_element3)
+
+
+    def test_calculate_u_fractions_standard(self):
+        """Test that u-fractions are calculated correctly for a normal matrix."""
+        if isinstance(np, MagicMock):
+            return
+
+        # Standard normal array
+        mf = np.array([
+            [0.4, 0.4, 0.2], # sum of idx [0, 1] is 0.8
+            [0.6, 0.2, 0.2], # sum of idx [0, 1] is 0.8
+        ])
+        sub_idx = [0, 1]
+        elnames = ['Element1', 'Element2', 'Element3']
+
+        result = self.loader.calculate_u_fractions(mf, sub_idx, elnames)
+
+        # result: (mf / sub_sum).T
+        expected_element1 = np.array([0.5, 0.75])
+        expected_element2 = np.array([0.5, 0.25])
+        expected_element3 = np.array([0.25, 0.25])
 
         np.testing.assert_allclose(result[0], expected_element1)
         np.testing.assert_allclose(result[1], expected_element2)
