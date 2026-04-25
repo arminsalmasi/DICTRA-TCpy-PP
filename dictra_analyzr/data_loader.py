@@ -64,28 +64,24 @@ class DataLoader:
         return data
 
     def _categorize_elements(self, elnames: np.ndarray) -> Tuple[List[Any], List[Any]]:
-        interstitial_list = ['N', 'C', 'H', 'O', 'VA']
-        int_idx = []
-        sub_idx = list(range(len(elnames)))
+        acs_idx = []
+        subs_idx = []
 
-        found_interstitials = []
-        for el in interstitial_list:
-            if el in elnames:
-                idx = np.where(elnames == el)[0][0]
-                int_idx.append(idx)
-                found_interstitials.append(el)
+        found_acs = []
+        found_subs = []
 
-        # Remove interstitial indices from substitutional list
-        # We need to sort int_idx descending to pop correctly if we were popping by index from a list,
-        # but here sub_idx contains indices, so we just remove the values.
-        for idx in int_idx:
-            if idx in sub_idx:
-                sub_idx.remove(idx)
+        for i, el in enumerate(elnames):
+            if isinstance(el, str) and el.startswith('AC'):
+                acs_idx.append(i)
+                found_acs.append(el)
+            else:
+                subs_idx.append(i)
+                found_subs.append(el)
 
-        interstitials = [np.array(found_interstitials), int_idx]
-        substitutionals = [elnames[sub_idx], sub_idx]
+        acs = [np.array(found_acs), acs_idx]
+        subs = [np.array(found_subs), subs_idx]
 
-        return interstitials, substitutionals
+        return acs, subs
 
     def get_timestamp(self, times: np.ndarray, timeflag: Any) -> Tuple[int, float]:
         """Finds the timestep index and value based on the flag."""
