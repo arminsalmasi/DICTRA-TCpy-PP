@@ -12,6 +12,12 @@ sys.modules['tc_python'] = MagicMock()
 if 'numpy' in sys.modules and isinstance(sys.modules['numpy'], MagicMock):
     del sys.modules['numpy']
 
+try:
+    import numpy as np
+except ImportError:
+    np = MagicMock()
+    sys.modules['numpy'] = np
+
 from dictra_analyzr.data_loader import DataLoader
 
 class TestDataLoader(unittest.TestCase):
@@ -54,9 +60,37 @@ class TestDataLoader(unittest.TestCase):
         np.testing.assert_allclose(result[1], expected_element2)
         np.testing.assert_allclose(result[2], expected_element3)
 
+    def test_find_nearest_exact_match(self):
+        """Test _find_nearest returns correct index and value when there is an exact match."""
+        if isinstance(np, MagicMock):
+            return
+
+        array = np.array([1.0, 3.0, 5.0, 7.0])
+        idx, val = self.loader._find_nearest(array, 5.0)
+
+        self.assertEqual(idx, 2)
+        self.assertEqual(val, 5.0)
+        self.assertIsInstance(idx, int)
+        self.assertIsInstance(val, float)
+
+    def test_find_nearest_closest_match(self):
+        """Test _find_nearest returns correct index and value when there is a closest match."""
+        if isinstance(np, MagicMock):
+            return
+
+        array = np.array([1.0, 3.0, 5.0, 7.0])
+        idx, val = self.loader._find_nearest(array, 2.8)
+
+        self.assertEqual(idx, 1)
+        self.assertEqual(val, 3.0)
+        self.assertIsInstance(idx, int)
+        self.assertIsInstance(val, float)
+
+    @patch('dictra_analyzr.data_loader.np.loadtxt')
     @patch('builtins.print')
-    def test_get_values_from_textfiles_error_path(self, mock_print):
+    def test_get_values_from_textfiles_error_path(self, mock_print, mock_loadtxt):
         """Test that get_values_from_textfiles correctly catches and re-raises exceptions."""
+        mock_loadtxt.side_effect = Exception("Mocked read error")
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir)
 

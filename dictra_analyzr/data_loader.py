@@ -117,7 +117,7 @@ class DataLoader:
     def _find_nearest(self, array: np.ndarray, value: float) -> Tuple[int, float]:
         array = np.asarray(array)
         idx = (np.abs(array - value)).argmin()
-        return idx, array[idx]
+        return int(idx), float(array[idx])
 
     def calculate_u_fractions(self, mf: np.ndarray, sub_idx: List[int], elnames: np.ndarray) -> np.ndarray:
         # Avoid division by zero
