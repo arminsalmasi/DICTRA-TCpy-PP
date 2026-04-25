@@ -4,8 +4,18 @@ from unittest.mock import MagicMock, patch
 from pathlib import Path
 
 # Mock proprietary and missing dependencies
-sys.modules['numpy'] = MagicMock()
-sys.modules['tc_python'] = MagicMock()
+if 'tc_python' not in sys.modules:
+    sys.modules['tc_python'] = MagicMock()
+
+# Global cleanup for previously established mocks that break things
+if 'numpy' in sys.modules and isinstance(sys.modules['numpy'], MagicMock):
+    del sys.modules['numpy']
+
+if 'numpy' not in sys.modules:
+    try:
+        import numpy
+    except ImportError:
+        sys.modules['numpy'] = MagicMock()
 
 from dictra_analyzr.calculator import ThermodynamicCalculator
 
