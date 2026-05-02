@@ -29,7 +29,7 @@ class TestPlotter(unittest.TestCase):
     def test_save_fig_exception_handled(self, mock_print, mock_plt):
         """Test that _save_fig handles exceptions gracefully without crashing."""
         # Set up the mock to raise an Exception when savefig is called
-        mock_plt.savefig.side_effect = Exception("Mocked save error")
+        mock_plt.savefig.side_effect = OSError("Mocked save error")
 
         filename = "test_plot"
         xlims = [0, 10]

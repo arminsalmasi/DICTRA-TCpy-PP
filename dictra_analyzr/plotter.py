@@ -329,7 +329,7 @@ class Plotter:
                     time_label = 'first' if t == 0 else 'last' # Simplification
                     csv_name = path / f'log10_AC_{time_label}_SER.csv'
                     df.to_csv(csv_name, index=False)
-                except Exception:
+                except OSError:
                     pass
 
             full_legend.extend(current_keys)
@@ -351,7 +351,7 @@ class Plotter:
             try:
                 ax.locator_params(axis='y', nbins=settings.bins)
                 ax.locator_params(axis='x', nbins=settings.bins)
-            except Exception: pass
+            except TypeError: pass
         for x in ax.spines.values():
             x.set_linewidth(settings.boxLW)
 
@@ -360,7 +360,7 @@ class Plotter:
         try:
             plt.savefig(f"{filename}{suffix}.png", dpi=400, bbox_inches='tight')
             # plt.savefig(f"{filename}{suffix}.pdf", dpi=1000, bbox_inches='tight') # PDF often slow
-        except Exception as e:
+        except OSError as e:
             print(f"Error saving figure {filename}: {e}")
 
     def get_xlims(self, data):
