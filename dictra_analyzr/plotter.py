@@ -359,7 +359,6 @@ class Plotter:
         suffix = f"_{xlims[0]}_{xlims[1]}"
         try:
             plt.savefig(f"{filename}{suffix}.png", dpi=400, bbox_inches='tight')
-            # plt.savefig(f"{filename}{suffix}.pdf", dpi=1000, bbox_inches='tight') # PDF often slow
         except Exception as e:
             print(f"Error saving figure {filename}: {e}")
 
