@@ -135,16 +135,8 @@ class ResultCorrector:
         return d
 
     def _check_condition_met(self, phXs, elnames, search_element, cutoff, search_idx):
-        condition_met = False
-        if 0 < cutoff < 1:
-            current_conc = phXs[np.where(elnames == search_element)[0][0]]
-            if current_conc > cutoff:
-                condition_met = True
-        elif cutoff == 1:
-            if search_idx == 0:
-                if phXs[np.where(elnames == search_element)[0][0]] > 0:
-                    condition_met = True
-        return condition_met
+        return phXs[search_idx] > cutoff
+
 
     def _get_new_phase_name(self, phase_to_change, sorted_elnames, cutoff):
         if 0 < cutoff < 1:

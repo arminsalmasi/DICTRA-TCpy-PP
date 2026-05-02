@@ -6,6 +6,10 @@ from pathlib import Path
 # Mock tc_python because it is a proprietary SDK unavailable in this environment
 sys.modules['tc_python'] = MagicMock()
 
+import sys
+from unittest.mock import MagicMock
+if 'numpy' in sys.modules and isinstance(sys.modules['numpy'], MagicMock):
+    del sys.modules['numpy']
 import numpy as np
 from dictra_analyzr.corrector import ResultCorrector
 
@@ -85,6 +89,26 @@ class TestResultCorrector(unittest.TestCase):
         dict_in = {}
         result = self.corrector.correct_phase_indices(dict_in)
         self.assertEqual(result, {})
+
+
+class TestCorrectorCondition(unittest.TestCase):
+    def setUp(self):
+        self.corrector = ResultCorrector(Path('dummy_path'))
+
+    def test_check_condition_met(self):
+        # The new logic is: return phXs[search_idx] > cutoff
+        phXs = np.array([0.1, 0.8, 0.1])
+        elnames = np.array(['Fe', 'Cr', 'Ni']) # Not used anymore, but good to have context
+
+        # Scenario 1: condition met
+        # phXs[1] = 0.8. Cutoff = 0.5. 0.8 > 0.5 is True.
+        res1 = self.corrector._check_condition_met(phXs, elnames, 'Cr', 0.5, 1)
+        self.assertTrue(res1)
+
+        # Scenario 2: condition not met
+        # phXs[1] = 0.8. Cutoff = 0.9. 0.8 > 0.9 is False.
+        res2 = self.corrector._check_condition_met(phXs, elnames, 'Cr', 0.9, 1)
+        self.assertFalse(res2)
 
 if __name__ == '__main__':
     unittest.main()
