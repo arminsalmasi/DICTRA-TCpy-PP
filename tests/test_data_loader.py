@@ -12,6 +12,7 @@ sys.modules['tc_python'] = MagicMock()
 if 'numpy' in sys.modules and isinstance(sys.modules['numpy'], MagicMock):
     del sys.modules['numpy']
 
+import numpy as np
 from dictra_analyzr.data_loader import DataLoader
 
 class TestDataLoader(unittest.TestCase):

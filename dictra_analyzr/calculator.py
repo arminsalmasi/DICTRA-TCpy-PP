@@ -167,32 +167,56 @@ class ThermodynamicCalculator:
             'phases': {}
         }
 
+        queries = []
+
         if 'C' in elnames:
             for reference in acsRef:
-                results['acRefs'][f'ac(C, {reference})'] = pntEq.get_value_of(f'ac(C, {reference})')
+                queries.append(f'ac(C, {reference})')
 
         for el in elnames:
-            results['acSER'][el] = pntEq.get_value_of(f'ac({el})')
-            results['mus'][el] = pntEq.get_value_of(f'mu({el})')
-            results['ws'][el] = pntEq.get_value_of(f'w({el})')
+            queries.append(f'ac({el})')
+            queries.append(f'mu({el})')
+            queries.append(f'w({el})')
+
+        for ph in stablePhs:
+            queries.append(f'npm({ph})')
+            queries.append(f'vpv({ph})')
+            for el2 in elnames:
+                queries.append(f'X({ph}, {el2})')
+            if McalcFlag:
+                for el2 in elnames:
+                    queries.append(f'M({ph}, {el2})')
+                    queries.append(f'X({ph}, {el2})')
+
+        values = pntEq.get_values_of(queries)
+        val_iter = iter(values)
+
+        if 'C' in elnames:
+            for reference in acsRef:
+                results['acRefs'][f'ac(C, {reference})'] = next(val_iter)
+
+        for el in elnames:
+            results['acSER'][el] = next(val_iter)
+            results['mus'][el] = next(val_iter)
+            results['ws'][el] = next(val_iter)
 
         for ph in stablePhs:
             ph_data = {
-                'npm': pntEq.get_value_of(f'npm({ph})'),
-                'vpv': pntEq.get_value_of(f'vpv({ph})'),
+                'npm': next(val_iter),
+                'vpv': next(val_iter),
                 'X': None
             }
 
             temp1 = []
             for el2 in elnames:
-                temp1.append(pntEq.get_value_of(f'X({ph}, {el2})'))
+                temp1.append(next(val_iter))
             ph_data['X'] = np.array(temp1)
 
             if McalcFlag:
                 temp2, temp3 = [], []
                 for el2 in elnames:
-                    m_val = pntEq.get_value_of(f'M({ph}, {el2})')
-                    x_val = pntEq.get_value_of(f'X({ph}, {el2})')
+                    m_val = next(val_iter)
+                    x_val = next(val_iter)
                     temp2.append(m_val)
                     temp3.append(m_val * x_val)
                 ph_data['M'] = np.array(temp2)
