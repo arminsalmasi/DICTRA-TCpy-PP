@@ -1,7 +1,7 @@
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Tuple, Dict, Any, Optional
+from typing import List, Tuple, Any
 
 @dataclass
 class TCSetting:
