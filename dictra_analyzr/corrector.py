@@ -75,28 +75,13 @@ class ResultCorrector:
                     phXs = tS_TC_NEAT_phXs[phase][pt, :]
                     if np.any(phXs > 0):
                         # Sort by fraction to find major elements
-                        # The logic in original code seems to try to find if 'search_element' is dominant
                         sorted_indices = np.flip(np.argsort(phXs))
 
                         # sorted_indices contains all indices, so search_element_idx is guaranteed to be found
                         search_idx = np.where(sorted_indices == search_element_idx)[0][0]
 
-                        # Original logic reconstruction:
-                        # cutoff > 0 and < 1: check if search_element fraction > cutoff
-                        # cutoff == 1: check if search_element is the largest constituent (index 0)
-
                         condition_met = False
                         if 0 < cutoff < 1:
-                             # Wait, original code checks sorted_phXs[sorted_searchElidx] > cutoff
-                             # sorted_phXs matches sorted_elnames.
-                             # So if search_element is at index `search_idx` in `sorted_elnames`,
-                             # its value is `phXs[original_index_of_search_element]`.
-                             # The original code:
-                             # sorted_phXs = ...
-                             # sorted_searchElidx = np.where( sorted_elnames ==  search_element )[0][0]
-                             # if sorted_phXs[sorted_searchElidx] > cutoff: ...
-
-                             # Let's trust the logic: is the concentration of search_element > cutoff?
                              current_conc = phXs[search_element_idx]
                              if current_conc > cutoff:
                                  condition_met = True
