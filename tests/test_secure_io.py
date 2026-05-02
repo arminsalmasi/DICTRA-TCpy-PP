@@ -1,6 +1,8 @@
 import os
 import unittest
 import tempfile
+import json
+from unittest.mock import patch
 import numpy as np
 
 from dictra_analyzr.secure_io import secure_load, secure_save
@@ -52,6 +54,23 @@ class TestSecureIO(unittest.TestCase):
     def test_secure_load_file_not_found(self):
         with self.assertRaises(FileNotFoundError):
             secure_load("non_existent_file_path_12345.json")
+
+    def test_secure_load_json_error(self):
+        fd, temp_path = tempfile.mkstemp(suffix=".json")
+        os.close(fd)
+        try:
+            with open(temp_path, 'w') as f:
+                f.write("invalid json {")
+            with self.assertRaises(json.JSONDecodeError):
+                secure_load(temp_path)
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+
+    @patch('builtins.open', side_effect=PermissionError)
+    def test_secure_load_permission_error(self, mock_open):
+        with self.assertRaises(PermissionError):
+            secure_load("some_file.json")
 
 if __name__ == '__main__':
     unittest.main()
