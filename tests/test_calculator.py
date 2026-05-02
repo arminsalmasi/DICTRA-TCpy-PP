@@ -5,7 +5,11 @@ from pathlib import Path
 
 # Mock proprietary and missing dependencies
 sys.modules['numpy'] = MagicMock()
-sys.modules['tc_python'] = MagicMock()
+
+class DummyTCPythonException(Exception): pass
+mock_tc = MagicMock()
+mock_tc.TCPythonException = DummyTCPythonException
+sys.modules['tc_python'] = mock_tc
 
 from dictra_analyzr.calculator import ThermodynamicCalculator
 
@@ -38,10 +42,11 @@ class TestThermodynamicCalculator(unittest.TestCase):
             'path': 'dummy_pth'
         }
 
+        from dictra_analyzr.calculator import TCPythonException
         with patch.object(self.calc, '_setup_system') as mock_setup:
             mock_poly = MagicMock()
-            # Force calculate() to raise an exception
-            mock_poly.calculate.side_effect = Exception("Test Calculation Error")
+            # Force calculate() to raise a TCPythonException
+            mock_poly.calculate.side_effect = TCPythonException("Test Calculation Error")
             mock_setup.return_value = mock_poly
 
             # Suppress print statements in tests

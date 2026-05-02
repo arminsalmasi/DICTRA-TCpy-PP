@@ -12,9 +12,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 try:
-    from tc_python import TCPython
+    from tc_python import TCPython, TCPythonException
 except ImportError:
     # Mock for environments without tc_python
+    class TCPythonException(Exception): pass
     class TCPython:
         def __enter__(self): return self
         def __exit__(self, exc_type, exc_val, exc_tb): pass
@@ -132,9 +133,12 @@ class ThermodynamicCalculator:
                             tc_M[f'{pt}, {ph}'] = ph_data['M']
                             tc_G[f'{pt}, {ph}'] = ph_data['G']
 
-                except Exception as e:
+                except TCPythonException as e:
                     # Log error but continue
                     logger.warning(f"Calculation failed at point {pt}: {e}")
+                except Exception as e:
+                    logger.error(f"Unexpected error at point {pt}: {e}", exc_info=True)
+                    raise
 
         # Post-loop organization
         if McalcFlag:
