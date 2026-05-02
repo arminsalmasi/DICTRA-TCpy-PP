@@ -44,7 +44,7 @@ class DataLoader:
             data['DICT_all_npms'] = np.loadtxt(path / 'PHASE_FRACTIONS.TXT', dtype=float)
             data['DICT_all_mus'] = np.loadtxt(path / 'CHEMICAL_POTENTIALS.TXT', dtype=float)
             data['T'] = np.loadtxt(path / 'T.DAT', dtype=int)
-        except Exception as e:
+        except (FileNotFoundError, IOError) as e:
             print(f"Error reading text files in {path}: {e}")
             raise
 
