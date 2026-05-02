@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Any, List
 from .config import Config, PlotSettings
 
 class Plotter:
