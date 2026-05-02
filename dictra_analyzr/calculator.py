@@ -75,8 +75,8 @@ class ThermodynamicCalculator:
             pth = d['path']
             poly3Flag = d['tc_setting'].p3flag
             McalcFlag = d['tc_setting'].mobFlag
-        except KeyError as e:
-            print(f"Error in TC input data: Missing key {e}")
+        except Exception as e:
+            print(e)
             return d
 
         print('Calculing thermodynamics...')

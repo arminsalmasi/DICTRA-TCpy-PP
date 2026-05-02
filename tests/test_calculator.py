@@ -4,7 +4,10 @@ from unittest.mock import MagicMock, patch
 from pathlib import Path
 
 # Mock proprietary and missing dependencies
-sys.modules['numpy'] = MagicMock()
+try:
+    import numpy as np
+except ImportError:
+    sys.modules['numpy'] = MagicMock()
 sys.modules['tc_python'] = MagicMock()
 
 from dictra_analyzr.calculator import ThermodynamicCalculator
@@ -12,6 +15,35 @@ from dictra_analyzr.calculator import ThermodynamicCalculator
 class TestThermodynamicCalculator(unittest.TestCase):
     def setUp(self):
         self.calc = ThermodynamicCalculator(Path("dummy_path"))
+
+    @patch('builtins.print')
+    @patch('dictra_analyzr.calculator.TCPython')
+    def test_tccalc_input_exception_handling(self, mock_tcpython, mock_print):
+        """Test that an exception during input parsing is caught and printed."""
+
+        # We need an object that acts like a dict but raises a specific Exception when accessed
+        class FaultyDict(dict):
+            def __getitem__(self, key):
+                if key == 'tS_DICT_mfs':
+                    raise Exception("Test Generic Exception")
+                return super().__getitem__(key)
+
+        # We also need to patch deepcopy to return our faulty dict
+        dict_input = {'T': 1000.0}
+
+        with patch('copy.deepcopy', return_value=FaultyDict(dict_input)):
+            # This should trigger the exception when 'tS_DICT_mfs' is accessed
+            self.calc.tccalc(dict_input)
+
+        # Verify that print was called with the exact exception
+        # We can assert that print was called with an Exception whose string match our message
+        found = False
+        for call in mock_print.call_args_list:
+            args, _ = call
+            if len(args) > 0 and isinstance(args[0], Exception) and str(args[0]) == "Test Generic Exception":
+                found = True
+                break
+        self.assertTrue(found, "print() was not called with the expected Exception")
 
     @patch('dictra_analyzr.calculator.logger')
     @patch('dictra_analyzr.calculator.TCPython')
