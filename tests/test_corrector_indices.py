@@ -1,6 +1,5 @@
 import unittest
 import sys
-from unittest.mock import MagicMock
 from pathlib import Path
 import numpy as np
 
