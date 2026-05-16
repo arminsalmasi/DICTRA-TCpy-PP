@@ -12,8 +12,13 @@ class ResultCorrector:
         self.base_path = base_path
 
     def process_corrections(self, config: Config):
+        resolved_base = self.base_path.resolve()
         for dir_name in config.dirList:
-            dir_path = self.base_path / dir_name
+            dir_path = (self.base_path / dir_name).resolve()
+
+            if not dir_path.is_relative_to(resolved_base):
+                raise ValueError(f"Security Error: Path traversal detected. '{dir_name}' resolves outside base path '{resolved_base}'.")
+
             for tflag in config.timeflags:
                 input_file = dir_path / f'uncorrected_results_{tflag}.json'
                 output_file = dir_path / f'results_{tflag}.json'
