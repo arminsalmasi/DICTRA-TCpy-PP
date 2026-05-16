@@ -6,7 +6,14 @@ from pathlib import Path
 # Mock tc_python because it is a proprietary SDK unavailable in this environment
 sys.modules['tc_python'] = MagicMock()
 
-import numpy as np
+try:
+    import numpy as np
+    HAVE_NUMPY = True
+except ImportError:
+    np = MagicMock()
+    sys.modules['numpy'] = np
+    HAVE_NUMPY = False
+
 from dictra_analyzr.corrector import ResultCorrector
 
 class TestResultCorrector(unittest.TestCase):
@@ -43,6 +50,7 @@ class TestResultCorrector(unittest.TestCase):
         self.assertEqual(new_dict['PhaseD'], [4, 5, 6])
         self.assertEqual(new_dict['PhaseE'], [7, 8, 9])
 
+    @unittest.skipIf(not HAVE_NUMPY, "Requires real NumPy")
     def test_phnameChange_existing_target(self):
         dict_in = {
             'name_pairs': [('PhaseA', 'PhaseB')],
@@ -85,6 +93,27 @@ class TestResultCorrector(unittest.TestCase):
         dict_in = {}
         result = self.corrector.correct_phase_indices(dict_in)
         self.assertEqual(result, {})
+
+    @unittest.skipIf(not HAVE_NUMPY, "Requires real NumPy")
+    def test_cleanup_empty_phases(self):
+        d = {
+            'CQT_tS_TC_NEAT_npms': {
+                'EmptyPhase1': np.array([0.0, 0.0, 0.0]),
+                'NonEmptyPhase': np.array([0.1, 0.0])
+            },
+            'CQT_tS_TC_NEAT_phXs': {
+                'EmptyPhaseX1': np.array([[0.0, 0.0], [0.0, 0.0]]),
+                'NonEmptyPhaseX': np.array([[1.0, 0.0], [0.0, 0.0]])
+            }
+        }
+
+        self.corrector._cleanup_empty_phases(d)
+
+        self.assertNotIn('EmptyPhase1', d['CQT_tS_TC_NEAT_npms'])
+        self.assertIn('NonEmptyPhase', d['CQT_tS_TC_NEAT_npms'])
+
+        self.assertNotIn('EmptyPhaseX1', d['CQT_tS_TC_NEAT_phXs'])
+        self.assertIn('NonEmptyPhaseX', d['CQT_tS_TC_NEAT_phXs'])
 
 if __name__ == '__main__':
     unittest.main()
