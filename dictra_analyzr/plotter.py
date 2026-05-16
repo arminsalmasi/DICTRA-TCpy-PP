@@ -329,8 +329,8 @@ class Plotter:
                     time_label = 'first' if t == 0 else 'last' # Simplification
                     csv_name = path / f'log10_AC_{time_label}_SER.csv'
                     df.to_csv(csv_name, index=False)
-                except Exception:
-                    pass
+                except OSError as e:
+                    print(f"Error saving CSV {csv_name}: {e}")
 
             full_legend.extend(current_keys)
 
@@ -351,7 +351,7 @@ class Plotter:
             try:
                 ax.locator_params(axis='y', nbins=settings.bins)
                 ax.locator_params(axis='x', nbins=settings.bins)
-            except Exception: pass
+            except TypeError: pass
         for x in ax.spines.values():
             x.set_linewidth(settings.boxLW)
 
