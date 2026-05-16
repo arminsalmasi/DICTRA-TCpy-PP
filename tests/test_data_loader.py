@@ -118,6 +118,48 @@ class TestDataLoader(unittest.TestCase):
         np.testing.assert_array_equal(subs[0], np.array([]))
         self.assertEqual(subs[1], [])
 
+    @unittest.skipIf(not HAVE_NUMPY, "Requires real numpy")
+    def test_find_nearest_exact_match(self):
+        """Test _find_nearest when the value exists exactly in the array."""
+        arr = np.array([1.0, 2.0, 3.0, 4.0])
+        idx, val = self.loader._find_nearest(arr, 3.0)
+        self.assertEqual(idx, 2)
+        self.assertEqual(val, 3.0)
+
+    @unittest.skipIf(not HAVE_NUMPY, "Requires real numpy")
+    def test_find_nearest_below_target(self):
+        """Test _find_nearest when the nearest value is below the target."""
+        arr = np.array([1.0, 2.0, 3.0, 5.0])
+        idx, val = self.loader._find_nearest(arr, 2.4)
+        self.assertEqual(idx, 1)
+        self.assertEqual(val, 2.0)
+
+    @unittest.skipIf(not HAVE_NUMPY, "Requires real numpy")
+    def test_find_nearest_above_target(self):
+        """Test _find_nearest when the nearest value is above the target."""
+        arr = np.array([1.0, 2.0, 3.0, 5.0])
+        idx, val = self.loader._find_nearest(arr, 2.6)
+        self.assertEqual(idx, 2)
+        self.assertEqual(val, 3.0)
+
+    @unittest.skipIf(not HAVE_NUMPY, "Requires real numpy")
+    def test_find_nearest_negative_numbers(self):
+        """Test _find_nearest with an array containing negative numbers."""
+        arr = np.array([-5.0, -2.0, 0.0, 2.0])
+        idx, val = self.loader._find_nearest(arr, -1.0)
+        # -1.0 is equally close to -2.0 and 0.0, argmin returns the first index
+        self.assertEqual(idx, 1)
+        self.assertEqual(val, -2.0)
+
+    @unittest.skipIf(not HAVE_NUMPY, "Requires real numpy")
+    def test_find_nearest_duplicates(self):
+        """Test _find_nearest with an array containing duplicate nearest values."""
+        arr = np.array([1.0, 2.0, 2.0, 3.0])
+        idx, val = self.loader._find_nearest(arr, 2.1)
+        # argmin should return the first occurrence of 2.0
+        self.assertEqual(idx, 1)
+        self.assertEqual(val, 2.0)
+
     @patch('builtins.print')
     def test_get_values_from_textfiles_error_path(self, mock_print):
         """Test that get_values_from_textfiles correctly catches and re-raises exceptions."""
