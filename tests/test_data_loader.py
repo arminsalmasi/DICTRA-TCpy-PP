@@ -63,6 +63,23 @@ class TestDataLoader(unittest.TestCase):
         np.testing.assert_allclose(result[2], expected_element3)
 
     @unittest.skipIf(not HAVE_NUMPY, "Requires real numpy")
+    def test_calculate_u_fractions_all_zeroes(self):
+        """Test that division by zero is avoided when the array is entirely zeroes."""
+        mf = np.zeros((3, 3))
+        sub_idx = [0, 1]
+        elnames = ['Element1', 'Element2', 'Element3']
+
+        result = self.loader.calculate_u_fractions(mf, sub_idx, elnames)
+
+        expected_element1 = np.array([0.0, 0.0, 0.0])
+        expected_element2 = np.array([0.0, 0.0, 0.0])
+        expected_element3 = np.array([0.0, 0.0, 0.0])
+
+        np.testing.assert_allclose(result[0], expected_element1)
+        np.testing.assert_allclose(result[1], expected_element2)
+        np.testing.assert_allclose(result[2], expected_element3)
+
+    @unittest.skipIf(not HAVE_NUMPY, "Requires real numpy")
     def test_categorize_elements_mixed(self):
         """Test _categorize_elements with a mix of AC and substitutionals."""
         elnames = np.array(['FE', 'AC1', 'CR', 'AC2'])
