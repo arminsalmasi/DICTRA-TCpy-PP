@@ -148,5 +148,16 @@ class TestDataLoader(unittest.TestCase):
             # Reset permissions so tempfile can cleanup
             test_file.chmod(0o666)
 
+
+    @patch('builtins.print')
+    def test_get_timestamp_invalid_string(self, mock_print):
+        """Test that an invalid timeflag string defaults to the last timestep."""
+        times = [0.0, 1.0, 2.0, 3.0]
+        timeflag = "invalid_flag"
+        tS, nearestTime = self.loader.get_timestamp(times, timeflag)
+        self.assertEqual(tS, 3)
+        self.assertEqual(nearestTime, 3.0)
+        mock_print.assert_called_once_with(f"Warning: Invalid timeflag {timeflag}. Defaulting to last.")
+
 if __name__ == '__main__':
     unittest.main()
