@@ -15,6 +15,15 @@ class DataLoader:
         results = {}
         for dir_name in config.dirList:
             dir_path = self.base_path / dir_name
+
+            try:
+                if not dir_path.resolve().is_relative_to(self.base_path.resolve()):
+                    print(f"Warning: Directory {dir_path} is outside base path. Skipping.")
+                    continue
+            except ValueError:
+                print(f"Warning: Directory {dir_path} is outside base path. Skipping.")
+                continue
+
             if not dir_path.exists():
                 print(f"Warning: Directory {dir_path} does not exist. Skipping.")
                 continue

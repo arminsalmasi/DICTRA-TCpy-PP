@@ -13,6 +13,13 @@ class Plotter:
     def process_plots(self, config: Config):
         for dir_name in config.dirList:
             dir_path = self.base_path / dir_name
+            try:
+                if not dir_path.resolve().is_relative_to(self.base_path.resolve()):
+                    print(f"Warning: Directory {dir_path} is outside base path. Skipping.")
+                    continue
+            except ValueError:
+                print(f"Warning: Directory {dir_path} is outside base path. Skipping.")
+                continue
             if not dir_path.exists(): continue
 
             # Clean old files
@@ -188,6 +195,14 @@ class Plotter:
 
         for i, dir_name in enumerate(config.dirList):
             dir_path = path / dir_name
+            try:
+                if not dir_path.resolve().is_relative_to(path.resolve()):
+                    print(f"Warning: Directory {dir_path} is outside base path. Skipping.")
+                    continue
+            except ValueError:
+                print(f"Warning: Directory {dir_path} is outside base path. Skipping.")
+                continue
+
             fpath = dir_path / 'results_last.json'
             if not fpath.exists(): continue
 

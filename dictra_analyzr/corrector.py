@@ -14,6 +14,14 @@ class ResultCorrector:
     def process_corrections(self, config: Config):
         for dir_name in config.dirList:
             dir_path = self.base_path / dir_name
+            try:
+                if not dir_path.resolve().is_relative_to(self.base_path.resolve()):
+                    print(f"Warning: Directory {dir_path} is outside base path. Skipping.")
+                    continue
+            except ValueError:
+                print(f"Warning: Directory {dir_path} is outside base path. Skipping.")
+                continue
+
             for tflag in config.timeflags:
                 input_file = dir_path / f'uncorrected_results_{tflag}.json'
                 output_file = dir_path / f'results_{tflag}.json'
