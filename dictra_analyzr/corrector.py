@@ -79,7 +79,7 @@ class ResultCorrector:
                         sorted_indices = np.flip(np.argsort(phXs))
 
                         # sorted_indices contains all indices, so search_element_idx is guaranteed to be found
-                        search_idx = np.where(sorted_indices == search_element_idx)[0][0]
+                        search_idx = sorted_indices.tolist().index(search_element_idx)
 
                         # Original logic reconstruction:
                         # cutoff > 0 and < 1: check if search_element fraction > cutoff
