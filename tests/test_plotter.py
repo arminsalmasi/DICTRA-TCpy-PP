@@ -63,5 +63,43 @@ class TestPlotter(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.plotter.get_xlims(data)
 
+    @patch('dictra_analyzr.plotter.plt')
+    @patch.object(Plotter, '_decorate_ax')
+    @patch.object(Plotter, '_save_fig')
+    def test_plot_generic_empty_data(self, mock_save_fig, mock_decorate_ax, mock_plt):
+        """Test that plot_generic handles an empty list of data without crashing."""
+        # Setup mocks
+        mock_fig = MagicMock()
+        mock_ax = MagicMock()
+        mock_plt.subplots.return_value = (mock_fig, mock_ax)
+
+        # Setup mock settings
+        mock_settings = MagicMock()
+        mock_settings.figsize = (8, 6)
+        mock_settings.lineW = 1.0
+        mock_settings.legF = 10
+        mock_settings.xlab = "X Label"
+
+        # Test inputs
+        x_empty = []
+        y_empty = []
+        legend = ["legend"]
+        title = "title"
+        filename = "file"
+        ylab = "ylab"
+        xlims = [0, 1]
+
+        # Call the method
+        try:
+            self.plotter.plot_generic(x_empty, y_empty, legend, title, filename, ylab, xlims, mock_settings)
+        except Exception as e:
+            self.fail(f"plot_generic crashed with empty data: {e}")
+
+        # Assertions
+        # Just verify that the plotting functions were called to indicate it didn't return early or crash
+        mock_plt.subplots.assert_called()
+        mock_ax.plot.assert_called()
+        mock_save_fig.assert_called()
+
 if __name__ == '__main__':
     unittest.main()
