@@ -1,12 +1,12 @@
 import logging
 import os
-from .serialization import save_data, load_data
+from . import serializer
 import copy
 from collections import defaultdict
 import numpy as np
 from pathlib import Path
 from .config import Config
-from .safe_io import load_data, save_data
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -255,7 +255,7 @@ class ThermodynamicCalculator:
 
         for nph, ph in enumerate(tc_NEAT_phnames):
             for pt in range(n_pts):
-                key = (pt, ph)
+                key = f'{pt}, {ph}'
                 if key in tc_npms:
                     tc_NEAT_npms[ph][pt] = tc_npms[key]
                     tc_NEAT_vpvs[ph][pt] = tc_vpvs[key]
