@@ -148,5 +148,23 @@ class TestDataLoader(unittest.TestCase):
             # Reset permissions so tempfile can cleanup
             test_file.chmod(0o666)
 
+    @patch('builtins.print')
+    @patch('numpy.loadtxt', return_value=np.array([]))
+    def test_get_values_from_textfiles_ph_names_missing(self, mock_loadtxt, mock_print):
+        """Test that get_values_from_textfiles handles missing PH_NAMES.TXT correctly."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir)
+
+            data = self.loader.get_values_from_textfiles(path)
+
+            # Verify DICT_phnames is an empty array
+            if HAVE_NUMPY:
+                np.testing.assert_array_equal(data['DICT_phnames'], np.array([]))
+            else:
+                self.assertTrue(isinstance(data['DICT_phnames'], MagicMock) or hasattr(data['DICT_phnames'], '__len__'))
+
+            # Verify warning was printed
+            mock_print.assert_any_call(f"Warning: PH_NAMES.TXT not found in {path}")
+
 if __name__ == '__main__':
     unittest.main()
