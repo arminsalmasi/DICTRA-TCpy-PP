@@ -9,7 +9,9 @@ import builtins
 
 try:
     import numpy as np
+    HAVE_NUMPY = True
 except ImportError:
+    HAVE_NUMPY = False
     class DummyNdarray(list):
         def __init__(self, data, dtype="float64"):
             super().__init__(data)
@@ -60,8 +62,8 @@ class TestSerialization(unittest.TestCase):
             "list": [1, 2, 3],
             "dict": {"a": 1, "b": 2},
             "bool": True,
-            "numpy_int": np.integer(10),
-            "numpy_float": np.floating(5.5),
+            "numpy_int": np.int64(10) if HAVE_NUMPY else np.integer(10),
+            "numpy_float": np.float64(5.5) if HAVE_NUMPY else np.floating(5.5),
             "numpy_bool": np.bool_(True),
             "numpy_array": np.array([1.0, 2.0, 3.0]),
             "tc_setting": tc_setting

@@ -81,6 +81,19 @@ class TestResultCorrector(unittest.TestCase):
 
         self.assertEqual(new_dict['PhaseB'], [1, 2, 3])
 
+    def test_phnameChange_empty_dict(self):
+        dict_in = {}
+        result = self.corrector.phnameChange(dict_in)
+        self.assertEqual(result, {})
+
+    def test_phnameChange_missing_npms(self):
+        dict_in = {
+            'name_pairs': [('PhaseA', 'PhaseB')]
+        }
+        result = self.corrector.phnameChange(dict_in)
+        self.assertEqual(result, dict_in)
+        self.assertNotIn('nameChanged_CQT_tS_TC_NEAT_npms', result)
+
     def test_correct_phase_indices_missing_keys(self):
         dict_in = {}
         result = self.corrector.correct_phase_indices(dict_in)
