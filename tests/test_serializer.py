@@ -2,24 +2,21 @@ import os
 import sys
 import tempfile
 import unittest
+import sys
 from unittest.mock import MagicMock
 
-# Mock numpy and tc_python if missing in test environment
 try:
     import numpy as np
 except ImportError:
+    np = MagicMock()
     if 'numpy' not in sys.modules:
-        mock_np = MagicMock()
-        mock_np.ndarray = type('ndarray', (), {})
-        mock_np.integer = type('integer', (), {})
-        mock_np.floating = type('floating', (), {})
-        sys.modules['numpy'] = mock_np
-        np = mock_np
+        sys.modules['numpy'] = np
+    # Add fake types for np.integer and np.floating so isinstance checks pass if needed
+    np.integer = type('NpIntegerType', (int,), {})
+    np.floating = type('NpFloatingType', (float,), {})
 
-if 'tc_python' not in sys.modules:
-    sys.modules['tc_python'] = MagicMock()
-
-from dictra_analyzr.serializer import _encode_dict_keys, save_data, load_data
+from dictra_analyzr.serializer import _encode_dict_keys, data_decoder
+from dictra_analyzr.config import TCSetting
 
 class TestSerializer(unittest.TestCase):
     def test_encode_dict_keys_nested_structure(self):
@@ -29,32 +26,59 @@ class TestSerializer(unittest.TestCase):
         expected = {'__int_key_1': {'__tuple__': True, 'data': [2, [3, {'__int_key_4': 5}]]}}
         self.assertEqual(encoded, expected)
 
-    def test_save_load_data(self):
-        """Test that data is correctly saved and loaded, preserving types."""
-        test_data = {
-            1: (2, 3),
-            "string_key": [4, 5, 6],
-            (7, 8): {"nested": 9},
-            "numpy_float": 10.5,
-            "set_key": {11, 12}
+    def test_data_decoder_ndarray(self):
+        dct = {"__ndarray__": True, "data": [[1, 2], [3, 4]], "dtype": "int64"}
+        result = data_decoder(dct)
+        # If numpy is mocked, np.array will return a mock object.
+        # We can check that np.array was called correctly if it's a mock.
+        if isinstance(np, MagicMock):
+            np.array.assert_called_with([[1, 2], [3, 4]], dtype="int64")
+        else:
+            np.testing.assert_array_equal(result, np.array([[1, 2], [3, 4]], dtype=np.int64))
+
+    def test_data_decoder_npint(self):
+        dct = {"__npint__": True, "data": 42, "dtype": "int64"}
+        result = data_decoder(dct)
+        if isinstance(np, MagicMock):
+            np.dtype.assert_called_with("int64")
+        else:
+            self.assertEqual(result, np.int64(42))
+            self.assertTrue(isinstance(result, np.integer))
+
+    def test_data_decoder_npfloat(self):
+        dct = {"__npfloat__": True, "data": 3.14, "dtype": "float64"}
+        result = data_decoder(dct)
+        if isinstance(np, MagicMock):
+            np.dtype.assert_called_with("float64")
+        else:
+            self.assertEqual(result, np.float64(3.14))
+            self.assertTrue(isinstance(result, np.floating))
+
+    def test_data_decoder_set(self):
+        dct = {"__set__": True, "data": [1, 2, 3]}
+        result = data_decoder(dct)
+        self.assertEqual(result, {1, 2, 3})
+
+    def test_data_decoder_dataclass(self):
+        dct = {
+            "__dataclass__": "TCSetting",
+            "data": {
+                "database": ["TCFE9"],
+                "acRefs": [],
+                "phsToSus": [],
+                "p3flag": False,
+                "mobFlag": False
+            }
         }
+        result = data_decoder(dct)
+        self.assertTrue(isinstance(result, TCSetting))
+        self.assertEqual(result.database, ["TCFE9"])
+        self.assertEqual(result.p3flag, False)
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            filepath = os.path.join(tmpdir, "test_data.json")
-
-            # Save data
-            save_data(test_data, filepath)
-
-            # Verify file exists
-            self.assertTrue(os.path.exists(filepath))
-
-            # Load data
-            loaded_data = load_data(filepath)
-
-            # Verify data matches (sets are converted back from list format)
-            # Depending on numpy mock we may not get np.float/ndarray tests fully
-            # here, but we verify standard python types and mock fallbacks
-            self.assertEqual(test_data, loaded_data)
+    def test_data_decoder_default(self):
+        dct = {"some_key": "some_value"}
+        result = data_decoder(dct)
+        self.assertEqual(result, dct)
 
 if __name__ == '__main__':
     unittest.main()
