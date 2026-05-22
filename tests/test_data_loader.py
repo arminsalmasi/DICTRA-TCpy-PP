@@ -119,8 +119,9 @@ class TestDataLoader(unittest.TestCase):
         self.assertEqual(subs[1], [])
 
     @patch('builtins.print')
-    def test_get_values_from_textfiles_error_path(self, mock_print):
+    def test_get_values_from_textfiles_error_path(self, mock_print, mock_loadtxt):
         """Test that get_values_from_textfiles correctly catches and re-raises exceptions."""
+        mock_loadtxt.side_effect = Exception("Mocked read error")
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir)
 
