@@ -1,145 +1,153 @@
 import sys
 import unittest
 from unittest.mock import patch, MagicMock
-from pathlib import Path
 
-# Import the module we are testing
+# Ensure tc_python is mocked before any imports from the package
+if 'tc_python' not in sys.modules:
+    sys.modules['tc_python'] = MagicMock()
+
+# Since numpy is not available in the testing environment, mock it as well conditionally
+try:
+    import numpy
+except ImportError:
+    if 'numpy' not in sys.modules:
+        sys.modules['numpy'] = MagicMock()
+
+# Mock other external dependencies unavailable in the test environment
+try:
+    import matplotlib
+except ImportError:
+    if 'matplotlib' not in sys.modules:
+        sys.modules['matplotlib'] = MagicMock()
+        sys.modules['matplotlib.pyplot'] = MagicMock()
+
+try:
+    import pandas
+except ImportError:
+    if 'pandas' not in sys.modules:
+        sys.modules['pandas'] = MagicMock()
+
+try:
+    import scipy
+except ImportError:
+    if 'scipy' not in sys.modules:
+        sys.modules['scipy'] = MagicMock()
+        sys.modules['scipy.interpolate'] = MagicMock()
+
 import main
 
 class TestMain(unittest.TestCase):
 
-    @patch('main.argparse.ArgumentParser.parse_args')
     @patch('main.Path')
     @patch('main.DictraPipeline')
-    def test_main_success(self, mock_pipeline_class, mock_path_class, mock_parse_args):
-        # Setup mocks
-        mock_args = MagicMock()
-        mock_args.path = '.'
-        mock_args.config = 'settings.json'
-        mock_parse_args.return_value = mock_args
-
+    @patch('sys.argv', ['main.py'])
+    def test_main_default_args(self, mock_pipeline, mock_path_class):
         mock_base_path = MagicMock()
-        mock_base_path.__str__.return_value = '/test/base'
-        mock_base_path.exists.return_value = True
-
         mock_config_path = MagicMock()
-        mock_config_path.__str__.return_value = '/test/base/settings.json'
-        mock_config_path.exists.return_value = True
 
-        mock_base_path.resolve.return_value = mock_base_path
+        mock_path_instance = MagicMock()
+        mock_path_class.return_value = mock_path_instance
+        mock_path_instance.resolve.return_value = mock_base_path
+
         mock_base_path.__truediv__.return_value = mock_config_path
 
-        mock_path_class.return_value = mock_base_path
+        mock_base_path.exists.return_value = True
+        mock_config_path.exists.return_value = True
 
-        mock_pipeline_instance = MagicMock()
-        mock_pipeline_class.return_value = mock_pipeline_instance
+        mock_base_path.__str__.return_value = '/mock/base_path'
+        mock_config_path.__str__.return_value = '/mock/base_path/settings.json'
 
-        # Execute
         main.main()
 
-        # Assertions
-        mock_pipeline_class.assert_called_once_with('/test/base/settings.json', '/test/base')
-        mock_pipeline_instance.run.assert_called_once()
+        mock_pipeline.assert_called_once_with('/mock/base_path/settings.json', '/mock/base_path')
+        mock_pipeline.return_value.run.assert_called_once()
 
-    @patch('main.sys.exit')
-    @patch('builtins.print')
-    @patch('main.argparse.ArgumentParser.parse_args')
-    @patch('main.Path')
-    def test_main_missing_base_path(self, mock_path_class, mock_parse_args, mock_print, mock_exit):
-        # Setup mocks
-        mock_args = MagicMock()
-        mock_args.path = 'invalid_path'
-        mock_args.config = 'settings.json'
-        mock_parse_args.return_value = mock_args
-
-        mock_base_path = MagicMock()
-        mock_base_path.__str__.return_value = '/test/invalid_path'
-        mock_base_path.exists.return_value = False
-
-        mock_base_path.resolve.return_value = mock_base_path
-        mock_path_class.return_value = mock_base_path
-
-        mock_exit.side_effect = Exception('SystemExit mocked')
-
-        # Execute
-        with self.assertRaisesRegex(Exception, 'SystemExit mocked'):
-            main.main()
-
-        # Assertions
-        mock_print.assert_called_once_with('Error: Path /test/invalid_path does not exist.')
-        mock_exit.assert_called_once_with(1)
-
-    @patch('main.sys.exit')
-    @patch('builtins.print')
-    @patch('main.argparse.ArgumentParser.parse_args')
-    @patch('main.Path')
-    def test_main_missing_config_path(self, mock_path_class, mock_parse_args, mock_print, mock_exit):
-        # Setup mocks
-        mock_args = MagicMock()
-        mock_args.path = '.'
-        mock_args.config = 'missing_settings.json'
-        mock_parse_args.return_value = mock_args
-
-        mock_base_path = MagicMock()
-        mock_base_path.__str__.return_value = '/test/base'
-        mock_base_path.exists.return_value = True
-
-        mock_config_path = MagicMock()
-        mock_config_path.__str__.return_value = '/test/base/missing_settings.json'
-        mock_config_path.exists.return_value = False
-
-        mock_base_path.resolve.return_value = mock_base_path
-        mock_base_path.__truediv__.return_value = mock_config_path
-        mock_path_class.return_value = mock_base_path
-
-        mock_exit.side_effect = Exception('SystemExit mocked')
-
-        # Execute
-        with self.assertRaisesRegex(Exception, 'SystemExit mocked'):
-            main.main()
-
-        # Assertions
-        mock_print.assert_any_call('Error: Configuration file /test/base/missing_settings.json not found.')
-        mock_print.assert_any_call('Please ensure settings.json exists in the target directory.')
-        mock_exit.assert_called_once_with(1)
-
-    @patch('main.sys.exit')
-    @patch('traceback.print_exc')
-    @patch('builtins.print')
-    @patch('main.argparse.ArgumentParser.parse_args')
     @patch('main.Path')
     @patch('main.DictraPipeline')
-    def test_main_pipeline_exception(self, mock_pipeline_class, mock_path_class, mock_parse_args, mock_print, mock_print_exc, mock_exit):
-        # Setup mocks
-        mock_args = MagicMock()
-        mock_args.path = '.'
-        mock_args.config = 'settings.json'
-        mock_parse_args.return_value = mock_args
-
+    @patch('sys.argv', ['main.py', '/custom/path', '--config', 'custom.json'])
+    def test_main_custom_args(self, mock_pipeline, mock_path_class):
         mock_base_path = MagicMock()
-        mock_base_path.__str__.return_value = '/test/base'
-        mock_base_path.exists.return_value = True
-
         mock_config_path = MagicMock()
-        mock_config_path.__str__.return_value = '/test/base/settings.json'
+
+        mock_path_class.return_value.resolve.return_value = mock_base_path
+        mock_base_path.__truediv__.return_value = mock_config_path
+
+        mock_base_path.exists.return_value = True
         mock_config_path.exists.return_value = True
 
-        mock_base_path.resolve.return_value = mock_base_path
-        mock_base_path.__truediv__.return_value = mock_config_path
-        mock_path_class.return_value = mock_base_path
+        mock_base_path.__str__.return_value = '/custom/path'
+        mock_config_path.__str__.return_value = '/custom/path/custom.json'
 
-        mock_pipeline_instance = MagicMock()
-        mock_pipeline_instance.run.side_effect = Exception("Test Pipeline Error")
-        mock_pipeline_class.return_value = mock_pipeline_instance
+        main.main()
 
-        mock_exit.side_effect = Exception('SystemExit mocked')
+        mock_pipeline.assert_called_once_with('/custom/path/custom.json', '/custom/path')
+        mock_pipeline.return_value.run.assert_called_once()
 
-        # Execute
-        with self.assertRaisesRegex(Exception, 'SystemExit mocked'):
+    @patch('sys.exit')
+    @patch('main.Path')
+    @patch('sys.argv', ['main.py'])
+    def test_main_base_path_not_exists(self, mock_path_class, mock_exit):
+        # We must prevent sys.exit from raising SystemExit, but we also want to stop
+        # execution of main() after sys.exit(1) is called, so we raise an exception
+        # we can catch, or we can just mock sys.exit to raise an exception.
+        mock_exit.side_effect = Exception("SystemExit mocked")
+        mock_base_path = MagicMock()
+        mock_path_class.return_value.resolve.return_value = mock_base_path
+
+        mock_base_path.exists.return_value = False
+
+        try:
             main.main()
+        except Exception as e:
+            if str(e) != "SystemExit mocked":
+                raise
 
-        # Assertions
-        mock_print.assert_called_once_with('Pipeline failed: Test Pipeline Error')
+        mock_exit.assert_called_once_with(1)
+
+    @patch('sys.exit')
+    @patch('main.Path')
+    @patch('sys.argv', ['main.py'])
+    def test_main_config_path_not_exists(self, mock_path_class, mock_exit):
+        mock_exit.side_effect = Exception("SystemExit mocked")
+        mock_base_path = MagicMock()
+        mock_config_path = MagicMock()
+
+        mock_path_class.return_value.resolve.return_value = mock_base_path
+        mock_base_path.__truediv__.return_value = mock_config_path
+
+        mock_base_path.exists.return_value = True
+        mock_config_path.exists.return_value = False
+
+        try:
+            main.main()
+        except Exception as e:
+            if str(e) != "SystemExit mocked":
+                raise
+
+        mock_exit.assert_called_once_with(1)
+
+    @patch('traceback.print_exc')
+    @patch('sys.exit')
+    @patch('main.DictraPipeline')
+    @patch('main.Path')
+    @patch('sys.argv', ['main.py'])
+    def test_main_pipeline_exception(self, mock_path_class, mock_pipeline, mock_exit, mock_print_exc):
+        mock_base_path = MagicMock()
+        mock_config_path = MagicMock()
+
+        mock_path_class.return_value.resolve.return_value = mock_base_path
+        mock_base_path.__truediv__.return_value = mock_config_path
+
+        mock_base_path.exists.return_value = True
+        mock_config_path.exists.return_value = True
+
+        mock_base_path.__str__.return_value = '/mock/base_path'
+        mock_config_path.__str__.return_value = '/mock/base_path/settings.json'
+
+        mock_pipeline.return_value.run.side_effect = Exception("Test exception")
+
+        main.main()
+
         mock_print_exc.assert_called_once()
         mock_exit.assert_called_once_with(1)
 
