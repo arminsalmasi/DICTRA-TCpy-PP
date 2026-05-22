@@ -1,6 +1,7 @@
 import sys
 if 'numpy' in sys.modules and type(sys.modules['numpy']).__name__ == 'MagicMock':
     del sys.modules['numpy']
+import numpy as np
 import unittest
 import tempfile
 from pathlib import Path
