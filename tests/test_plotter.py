@@ -47,5 +47,21 @@ class TestPlotter(unittest.TestCase):
         # Verify that the exception was caught and printed
         mock_print.assert_called_once_with(f"Error saving figure {filename}: Mocked save error")
 
+    def test_get_xlims_valid(self):
+        """Test get_xlims with valid iterable of arrays."""
+        import numpy as np
+        data = [
+            np.array([[10, 1], [20, 2], [30, 3]]),
+            np.array([[5, 1], [15, 2], [25, 3]])
+        ]
+        xlims = self.plotter.get_xlims(data)
+        self.assertEqual(xlims, [5, 30])
+
+    def test_get_xlims_empty(self):
+        """Test get_xlims with empty data list."""
+        data = []
+        with self.assertRaises(ValueError):
+            self.plotter.get_xlims(data)
+
 if __name__ == '__main__':
     unittest.main()
