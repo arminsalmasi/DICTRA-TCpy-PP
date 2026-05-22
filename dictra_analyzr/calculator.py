@@ -60,25 +60,43 @@ class ThermodynamicCalculator:
                 serializer.save_data(tS_tc_VLUs, output_file)
                 print(f"Saved uncorrected results to {output_file}")
 
+    def _extract_calculation_parameters(self, d):
+        try:
+            return {
+                'mfs': d['tS_DICT_mfs'],
+                'database': d['tc_setting'].database, # List expected
+                'n_pts': len(d['tS_pts']),
+                'phsToSus': d['tc_setting'].phsToSus,
+                'acsRef': d['tc_setting'].acRefs,
+                'T': d['T'],
+                'elnames': d['elnames'],
+                'pth': d['path'],
+                'poly3Flag': d['tc_setting'].p3flag,
+                'McalcFlag': d['tc_setting'].mobFlag
+            }
+        except KeyError as e:
+            print(f"Error in TC input data: Missing key {e}")
+            return None
+
     def tccalc(self, dict_input):
         """Calculate single equilibrium pt by pt with input condition."""
         # Deep copy to avoid mutating input
         d = copy.deepcopy(dict_input)
 
-        try:
-            mfs = d['tS_DICT_mfs']
-            database = d['tc_setting'].database # List expected
-            n_pts = len(d['tS_pts'])
-            phsToSus = d['tc_setting'].phsToSus
-            acsRef = d['tc_setting'].acRefs
-            T = d['T']
-            elnames = d['elnames']
-            pth = d['path']
-            poly3Flag = d['tc_setting'].p3flag
-            McalcFlag = d['tc_setting'].mobFlag
-        except KeyError as e:
-            print(f"Error in TC input data: Missing key {e}")
+        params = self._extract_calculation_parameters(d)
+        if params is None:
             return d
+
+        mfs = params['mfs']
+        database = params['database']
+        n_pts = params['n_pts']
+        phsToSus = params['phsToSus']
+        acsRef = params['acsRef']
+        T = params['T']
+        elnames = params['elnames']
+        pth = params['pth']
+        poly3Flag = params['poly3Flag']
+        McalcFlag = params['McalcFlag']
 
         print('Calculing thermodynamics...')
 
@@ -91,51 +109,9 @@ class ThermodynamicCalculator:
 
             poly.set_condition("T", float(T))
 
-            # Result containers
-            tc_phnames = {}
-            tc_npms = {}
-            tc_vpvs = {}
-            tc_phXs = {}
-            tc_acRefs = defaultdict(list)
-            tc_acSER = defaultdict(list)
-            tc_mus = defaultdict(list)
-            tc_ws = defaultdict(list)
-
-            tc_M = {}
-            tc_G = {}
-
-            # Iterate points
-            for pt in range(n_pts):
-                # Set conditions (skipping last element as balance)
-                for nel, el in enumerate(elnames[:-1]):
-                    poly.set_condition(f"X({el})", float(mfs[pt, nel]))
-
-                try:
-                    pnt_results = self._calculate_point_equilibrium(poly, elnames, acsRef, McalcFlag)
-
-                    tc_phnames[pt] = pnt_results['stablePhs']
-
-                    if 'C' in elnames:
-                        for reference, val in pnt_results['acRefs'].items():
-                            tc_acRefs[reference].append(val)
-
-                    for el in elnames:
-                        tc_acSER[el].append(pnt_results['acSER'][el])
-                        tc_mus[el].append(pnt_results['mus'][el])
-                        tc_ws[el].append(pnt_results['ws'][el])
-
-                    for ph, ph_data in pnt_results['phases'].items():
-                        tc_npms[f'{pt}, {ph}'] = ph_data['npm']
-                        tc_vpvs[f'{pt}, {ph}'] = ph_data['vpv']
-                        tc_phXs[f'{pt}, {ph}'] = ph_data['X']
-
-                        if McalcFlag:
-                            tc_M[f'{pt}, {ph}'] = ph_data['M']
-                            tc_G[f'{pt}, {ph}'] = ph_data['G']
-
-                except Exception as e:
-                    # Log error but continue
-                    logger.warning(f"Calculation failed at point {pt}: {e}")
+            tc_phnames, tc_npms, tc_vpvs, tc_phXs, tc_acRefs, tc_acSER, tc_mus, tc_ws, tc_M, tc_G = self._process_points(
+                poly, n_pts, elnames, mfs, acsRef, McalcFlag
+            )
 
         # Post-loop organization
         if McalcFlag:
@@ -146,14 +122,67 @@ class ThermodynamicCalculator:
         d['tS_TC_npms'] = tc_npms
         d['tS_TC_vpvs'] = tc_vpvs
         d['tS_TC_phXs'] = tc_phXs
-        d['tS_TC_acRef'] = dict(tc_acRefs)
-        d['tS_TC_acSER'] = dict(tc_acSER)
-        d['tS_TC_mus'] = dict(tc_mus)
-        d['tS_TC_ws'] = dict(tc_ws)
+        d['tS_TC_acRef'] = tc_acRefs
+        d['tS_TC_acSER'] = tc_acSER
+        d['tS_TC_mus'] = tc_mus
+        d['tS_TC_ws'] = tc_ws
 
         self._trim_results(d, elnames, n_pts, tc_phnames, tc_npms, tc_vpvs, tc_phXs, tc_M if McalcFlag else None, tc_G if McalcFlag else None, McalcFlag)
 
         return d
+
+    def _process_points(self, poly, n_pts, elnames, mfs, acsRef, McalcFlag):
+        # Result containers
+        tc_phnames = {}
+        tc_npms = {}
+        tc_vpvs = {}
+        tc_phXs = {}
+        tc_acRefs = defaultdict(list)
+        tc_acSER = defaultdict(list)
+        tc_mus = defaultdict(list)
+        tc_ws = defaultdict(list)
+
+        tc_M = {}
+        tc_G = {}
+
+        # Iterate points
+        for pt in range(n_pts):
+            # Set conditions (skipping last element as balance)
+            for nel, el in enumerate(elnames[:-1]):
+                poly.set_condition(f"X({el})", float(mfs[pt, nel]))
+
+            try:
+                pnt_results = self._calculate_point_equilibrium(poly, elnames, acsRef, McalcFlag)
+
+                tc_phnames[pt] = pnt_results['stablePhs']
+
+                if 'C' in elnames:
+                    for reference, val in pnt_results['acRefs'].items():
+                        tc_acRefs[reference].append(val)
+
+                for el in elnames:
+                    tc_acSER[el].append(pnt_results['acSER'][el])
+                    tc_mus[el].append(pnt_results['mus'][el])
+                    tc_ws[el].append(pnt_results['ws'][el])
+
+                for ph, ph_data in pnt_results['phases'].items():
+                    tc_npms[f'{pt}, {ph}'] = ph_data['npm']
+                    tc_vpvs[f'{pt}, {ph}'] = ph_data['vpv']
+                    tc_phXs[f'{pt}, {ph}'] = ph_data['X']
+
+                    if McalcFlag:
+                        tc_M[f'{pt}, {ph}'] = ph_data['M']
+                        tc_G[f'{pt}, {ph}'] = ph_data['G']
+
+            except Exception as e:
+                # Log error but continue
+                logger.warning(f"Calculation failed at point {pt}: {e}")
+
+        return (
+            tc_phnames, tc_npms, tc_vpvs, tc_phXs,
+            dict(tc_acRefs), dict(tc_acSER), dict(tc_mus), dict(tc_ws),
+            tc_M, tc_G
+        )
 
     def _calculate_point_equilibrium(self, poly, elnames, acsRef, McalcFlag):
         pntEq = poly.calculate()
