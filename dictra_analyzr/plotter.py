@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Any, List
 from .config import Config, PlotSettings
 
 class Plotter:
@@ -364,10 +364,8 @@ class Plotter:
             print(f"Error saving figure {filename}: {e}")
 
     def get_xlims(self, data):
-        pts = data.get('tS_pts')
-        if pts is not None and len(pts) > 0:
-            return [pts[0], pts[-1]]
-        return [0, 100]
+        xlims = [np.min([d[:, 0].min() for d in data]), np.max([d[:, 0].max() for d in data])]
+        return xlims
 
     def del_pngs_pdf(self, path: Path):
         for ext in ['*.png', '*.pdf']:
