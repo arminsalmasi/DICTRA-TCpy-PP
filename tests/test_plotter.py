@@ -25,11 +25,27 @@ class TestPlotter(unittest.TestCase):
         self.plotter = Plotter(Path("dummy_path"))
 
     @patch('dictra_analyzr.plotter.plt')
+    def test_plot_generic(self, mock_plt):
+        x = [1, 2, 3]
+        y = [4, 5, 6]
+        legend = 'Test Legend'
+        title = 'Test Title'
+        filename = 'test_file'
+        ylab = 'Y Axis'
+        xlims = [0, 10]
+        settings = MagicMock()
+
+        self.plotter.plot_generic(x, y, legend, title, filename, ylab, xlims, settings)
+
+        mock_plt.plot.assert_called_once_with(x, y, label=legend)
+        mock_plt.title.assert_called_once_with(title)
+
+    @patch('dictra_analyzr.plotter.plt')
     @patch('builtins.print')
     def test_save_fig_exception_handled(self, mock_print, mock_plt):
         """Test that _save_fig handles exceptions gracefully without crashing."""
         # Set up the mock to raise an Exception when savefig is called
-        mock_plt.savefig.side_effect = Exception("Mocked save error")
+        mock_plt.savefig.side_effect = OSError("Mocked save error")
 
         filename = "test_plot"
         xlims = [0, 10]

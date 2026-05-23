@@ -154,5 +154,9 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(config.name_pairs, [])
         self.assertEqual(config.phase_changes, [])
 
+    def test_from_json_file_not_found(self):
+        with self.assertRaises(FileNotFoundError):
+            Config.from_json("non_existent_file_xyz_123.json")
+
 if __name__ == '__main__':
     unittest.main()
