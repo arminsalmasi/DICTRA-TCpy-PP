@@ -1,6 +1,10 @@
 import unittest
 import sys
 from unittest.mock import MagicMock
+if 'numpy' in sys.modules and isinstance(sys.modules['numpy'], MagicMock):
+    del sys.modules['numpy']
+
+from unittest.mock import MagicMock
 from pathlib import Path
 
 # Mock tc_python because it is a proprietary SDK unavailable in this environment
