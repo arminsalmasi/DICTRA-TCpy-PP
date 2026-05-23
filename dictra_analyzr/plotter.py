@@ -237,12 +237,8 @@ class Plotter:
     # --- Plotting Primitives ---
 
     def plot_generic(self, x, y, legend, title, filename, ylab, xlims, settings: PlotSettings):
-        fig, ax = plt.subplots(1, 1, figsize=settings.figsize)
-        ax.plot(x, y, linewidth=settings.lineW)
-        ax.legend(legend, fontsize=settings.legF)
-        self._decorate_ax(ax, title, ylab, settings.xlab, xlims, settings)
-        self._save_fig(filename, xlims)
-        plt.close(fig)
+        plt.plot(x, y, label=legend)
+        plt.title(title)
 
     def plot_dict(self, x, y_dict, title, filename, ylab, xlims, settings: PlotSettings):
         self.plot_dict_generic(x, y_dict, title, filename, ylab, xlims, settings)
