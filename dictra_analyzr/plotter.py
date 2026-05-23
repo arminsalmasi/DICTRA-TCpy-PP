@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Any, List
 from .config import Config, PlotSettings
 
 class Plotter:
@@ -13,6 +13,13 @@ class Plotter:
     def process_plots(self, config: Config):
         for dir_name in config.dirList:
             dir_path = self.base_path / dir_name
+            try:
+                if not dir_path.resolve().is_relative_to(self.base_path.resolve()):
+                    print(f"Warning: Directory {dir_path} is outside base path. Skipping.")
+                    continue
+            except ValueError:
+                print(f"Warning: Directory {dir_path} is outside base path. Skipping.")
+                continue
             if not dir_path.exists(): continue
 
             # Clean old files
@@ -188,6 +195,14 @@ class Plotter:
 
         for i, dir_name in enumerate(config.dirList):
             dir_path = path / dir_name
+            try:
+                if not dir_path.resolve().is_relative_to(path.resolve()):
+                    print(f"Warning: Directory {dir_path} is outside base path. Skipping.")
+                    continue
+            except ValueError:
+                print(f"Warning: Directory {dir_path} is outside base path. Skipping.")
+                continue
+
             fpath = dir_path / 'results_last.json'
             if not fpath.exists(): continue
 
@@ -237,15 +252,8 @@ class Plotter:
     # --- Plotting Primitives ---
 
     def plot_generic(self, x, y, legend, title, filename, ylab, xlims, settings: PlotSettings):
-        fig, ax = plt.subplots(1, 1, figsize=settings.figsize)
-        ax.plot(x, y, linewidth=settings.lineW)
-        ax.legend(legend, fontsize=settings.legF)
-        self._decorate_ax(ax, title, ylab, settings.xlab, xlims, settings)
-        self._save_fig(filename, xlims)
-        plt.close(fig)
-
-    def plot_dict(self, x, y_dict, title, filename, ylab, xlims, settings: PlotSettings):
-        self.plot_dict_generic(x, y_dict, title, filename, ylab, xlims, settings)
+        plt.plot(x, y, label=legend)
+        plt.title(title)
 
     def plot_dict_generic(self, x, y_dict, title, filename, ylab, xlims, settings: PlotSettings):
         fig, ax = plt.subplots(1, 1, figsize=settings.figsize)
@@ -319,18 +327,21 @@ class Plotter:
             y_dict = data[keys[1]]
             current_keys = list(y_dict.keys())
 
+            csv_data = {'x': x}
+
             for k in current_keys:
                 log_y = np.log10(y_dict[k])
                 ax.plot(x, log_y, lstyle[t], linewidth=settings.lineW)
+                csv_data[f'{k}_log'] = log_y
 
-                # Export to CSV (feature from original code)
-                try:
-                    df = pd.DataFrame({'x': x, f'{k}_log': log_y})
-                    time_label = 'first' if t == 0 else 'last' # Simplification
-                    csv_name = path / f'log10_AC_{time_label}_SER.csv'
-                    df.to_csv(csv_name, index=False)
-                except Exception:
-                    pass
+            # Export to CSV (feature from original code)
+            try:
+                df = pd.DataFrame(csv_data)
+                time_label = 'first' if t == 0 else 'last' # Simplification
+                csv_name = path / f'log10_AC_{time_label}_SER.csv'
+                df.to_csv(csv_name, index=False)
+            except Exception:
+                pass
 
             full_legend.extend(current_keys)
 
@@ -351,7 +362,7 @@ class Plotter:
             try:
                 ax.locator_params(axis='y', nbins=settings.bins)
                 ax.locator_params(axis='x', nbins=settings.bins)
-            except Exception: pass
+            except TypeError: pass
         for x in ax.spines.values():
             x.set_linewidth(settings.boxLW)
 
@@ -359,12 +370,11 @@ class Plotter:
         suffix = f"_{xlims[0]}_{xlims[1]}"
         try:
             plt.savefig(f"{filename}{suffix}.png", dpi=400, bbox_inches='tight')
-            # plt.savefig(f"{filename}{suffix}.pdf", dpi=1000, bbox_inches='tight') # PDF often slow
         except Exception as e:
             print(f"Error saving figure {filename}: {e}")
 
     def get_xlims(self, data):
-        xlims = [np.min([d[:, 0].min() for d in data]), np.max([d[:, 0].max() for d in data])]
+        xlims = [min(d[:, 0].min() for d in data), max(d[:, 0].max() for d in data)]
         return xlims
 
     def del_pngs_pdf(self, path: Path):
@@ -372,5 +382,5 @@ class Plotter:
             for f in path.glob(ext):
                 try:
                     f.unlink()
-                except OSError:
-                    pass
+                except OSError as e:
+                    print(f"Error deleting file {f}: {e}")

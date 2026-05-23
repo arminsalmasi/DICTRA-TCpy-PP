@@ -15,6 +15,15 @@ class DataLoader:
         results = {}
         for dir_name in config.dirList:
             dir_path = self.base_path / dir_name
+
+            try:
+                if not dir_path.resolve().is_relative_to(self.base_path.resolve()):
+                    print(f"Warning: Directory {dir_path} is outside base path. Skipping.")
+                    continue
+            except ValueError:
+                print(f"Warning: Directory {dir_path} is outside base path. Skipping.")
+                continue
+
             if not dir_path.exists():
                 print(f"Warning: Directory {dir_path} does not exist. Skipping.")
                 continue
@@ -26,7 +35,8 @@ class DataLoader:
                 tS, nearestTime = self.get_timestamp(rData['times'], timeflag)
                 tS_VLUs = self.get_tS_VLUs(rData, tS, nearestTime)
 
-                output_file = dir_path / f'rawdata_{timeflag}.json'
+                safe_timeflag = str(timeflag).replace('/', '_').replace('\\', '_')
+                output_file = dir_path / f'rawdata_{safe_timeflag}.json'
                 serializer.save_data(tS_VLUs, output_file)
                 print(f"Saved raw data to {output_file}")
 
@@ -44,7 +54,7 @@ class DataLoader:
             data['DICT_all_npms'] = np.loadtxt(path / 'PHASE_FRACTIONS.TXT', dtype=float)
             data['DICT_all_mus'] = np.loadtxt(path / 'CHEMICAL_POTENTIALS.TXT', dtype=float)
             data['T'] = np.loadtxt(path / 'T.DAT', dtype=int)
-        except Exception as e:
+        except (FileNotFoundError, IOError) as e:
             print(f"Error reading text files in {path}: {e}")
             raise
 
@@ -113,7 +123,7 @@ class DataLoader:
     def _find_nearest(self, array: np.ndarray, value: float) -> Tuple[int, float]:
         array = np.asarray(array)
         idx = (np.abs(array - value)).argmin()
-        return idx, array[idx]
+        return int(idx), float(array[idx])
 
     def calculate_u_fractions(self, mf: np.ndarray, sub_idx: List[int], elnames: np.ndarray) -> np.ndarray:
         # Avoid division by zero
