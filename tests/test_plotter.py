@@ -25,6 +25,22 @@ class TestPlotter(unittest.TestCase):
         self.plotter = Plotter(Path("dummy_path"))
 
     @patch('dictra_analyzr.plotter.plt')
+    def test_plot_generic(self, mock_plt):
+        x = [1, 2, 3]
+        y = [4, 5, 6]
+        legend = 'Test Legend'
+        title = 'Test Title'
+        filename = 'test_file'
+        ylab = 'Y Axis'
+        xlims = [0, 10]
+        settings = MagicMock()
+
+        self.plotter.plot_generic(x, y, legend, title, filename, ylab, xlims, settings)
+
+        mock_plt.plot.assert_called_once_with(x, y, label=legend)
+        mock_plt.title.assert_called_once_with(title)
+
+    @patch('dictra_analyzr.plotter.plt')
     @patch('builtins.print')
     def test_save_fig_exception_handled(self, mock_print, mock_plt):
         """Test that _save_fig handles exceptions gracefully without crashing."""
@@ -46,6 +62,22 @@ class TestPlotter(unittest.TestCase):
 
         # Verify that the exception was caught and printed
         mock_print.assert_called_once_with(f"Error saving figure {filename}: Mocked save error")
+
+    def test_get_xlims_valid(self):
+        """Test get_xlims with valid iterable of arrays."""
+        import numpy as np
+        data = [
+            np.array([[10, 1], [20, 2], [30, 3]]),
+            np.array([[5, 1], [15, 2], [25, 3]])
+        ]
+        xlims = self.plotter.get_xlims(data)
+        self.assertEqual(xlims, [5, 30])
+
+    def test_get_xlims_empty(self):
+        """Test get_xlims with empty data list."""
+        data = []
+        with self.assertRaises(ValueError):
+            self.plotter.get_xlims(data)
 
 if __name__ == '__main__':
     unittest.main()
