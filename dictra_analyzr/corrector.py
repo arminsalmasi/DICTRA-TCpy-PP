@@ -1,10 +1,8 @@
 from .serialization import save_data, load_data
 import copy
-import sys
 import numpy as np
 from pathlib import Path
 from .config import Config
-from .secure_io import secure_save
 from .safe_io import load_data, save_data
 
 class ResultCorrector:
@@ -75,28 +73,13 @@ class ResultCorrector:
                     phXs = tS_TC_NEAT_phXs[phase][pt, :]
                     if np.any(phXs > 0):
                         # Sort by fraction to find major elements
-                        # The logic in original code seems to try to find if 'search_element' is dominant
                         sorted_indices = np.flip(np.argsort(phXs))
 
                         # sorted_indices contains all indices, so search_element_idx is guaranteed to be found
                         search_idx = np.where(sorted_indices == search_element_idx)[0][0]
 
-                        # Original logic reconstruction:
-                        # cutoff > 0 and < 1: check if search_element fraction > cutoff
-                        # cutoff == 1: check if search_element is the largest constituent (index 0)
-
                         condition_met = False
                         if 0 < cutoff < 1:
-                             # Wait, original code checks sorted_phXs[sorted_searchElidx] > cutoff
-                             # sorted_phXs matches sorted_elnames.
-                             # So if search_element is at index `search_idx` in `sorted_elnames`,
-                             # its value is `phXs[original_index_of_search_element]`.
-                             # The original code:
-                             # sorted_phXs = ...
-                             # sorted_searchElidx = np.where( sorted_elnames ==  search_element )[0][0]
-                             # if sorted_phXs[sorted_searchElidx] > cutoff: ...
-
-                             # Let's trust the logic: is the concentration of search_element > cutoff?
                              current_conc = phXs[search_element_idx]
                              if current_conc > cutoff:
                                  condition_met = True
@@ -135,16 +118,8 @@ class ResultCorrector:
         return d
 
     def _check_condition_met(self, phXs, elnames, search_element, cutoff, search_idx):
-        condition_met = False
-        if 0 < cutoff < 1:
-            current_conc = phXs[np.where(elnames == search_element)[0][0]]
-            if current_conc > cutoff:
-                condition_met = True
-        elif cutoff == 1:
-            if search_idx == 0:
-                if phXs[np.where(elnames == search_element)[0][0]] > 0:
-                    condition_met = True
-        return condition_met
+        return phXs[search_idx] > cutoff
+
 
     def _get_new_phase_name(self, phase_to_change, sorted_elnames, cutoff):
         if 0 < cutoff < 1:

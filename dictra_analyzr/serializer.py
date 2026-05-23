@@ -1,7 +1,6 @@
 import json
 import dataclasses
 import numpy as np
-from pathlib import Path
 
 class DataEncoder(json.JSONEncoder):
     def default(self, obj):
