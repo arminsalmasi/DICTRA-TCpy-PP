@@ -26,6 +26,7 @@ except ImportError:
 
 import numpy as np
 
+import numpy as np
 from dictra_analyzr.data_loader import DataLoader
 
 class TestDataLoader(unittest.TestCase):
