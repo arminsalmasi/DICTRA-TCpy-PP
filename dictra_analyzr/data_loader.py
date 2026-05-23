@@ -38,7 +38,8 @@ class DataLoader:
                 tS, nearestTime = self.get_timestamp(rData['times'], timeflag)
                 tS_VLUs = self.get_tS_VLUs(rData, tS, nearestTime)
 
-                output_file = dir_path / f'rawdata_{timeflag}.json'
+                safe_timeflag = str(timeflag).replace('/', '_').replace('\\', '_')
+                output_file = dir_path / f'rawdata_{safe_timeflag}.json'
                 serializer.save_data(tS_VLUs, output_file)
                 print(f"Saved raw data to {output_file}")
 

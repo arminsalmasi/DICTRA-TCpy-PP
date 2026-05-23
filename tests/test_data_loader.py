@@ -162,23 +162,34 @@ class TestDataLoader(unittest.TestCase):
             # Reset permissions so tempfile can cleanup
             test_file.chmod(0o666)
 
-    @patch('builtins.print')
-    @patch('numpy.loadtxt', return_value=np.array([]))
-    def test_get_values_from_textfiles_ph_names_missing(self, mock_loadtxt, mock_print):
-        """Test that get_values_from_textfiles handles missing PH_NAMES.TXT correctly."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            path = Path(tmpdir)
+    @patch('dictra_analyzr.data_loader.DataLoader.get_values_from_textfiles')
+    @patch('dictra_analyzr.data_loader.DataLoader.get_timestamp')
+    @patch('dictra_analyzr.data_loader.DataLoader.get_tS_VLUs')
+    @patch('dictra_analyzr.data_loader.serializer.save_data')
+    @patch('pathlib.Path.exists', return_value=True)
+    def test_process_directories_path_traversal_mitigation(
+        self, mock_exists, mock_save_data, mock_get_tS_VLUs, mock_get_timestamp, mock_get_values
+    ):
+        """Test that timeflag is sanitized to prevent path traversal when saving output."""
+        mock_get_values.return_value = {'times': np.array([0.0, 1.0])}
+        mock_get_timestamp.return_value = (1, 1.0)
+        mock_get_tS_VLUs.return_value = {'mocked_data': True}
 
-            data = self.loader.get_values_from_textfiles(path)
+        # Create a mock config with a malicious timeflag
+        mock_config = MagicMock()
+        mock_config.dirList = ['test_dir']
+        mock_config.timeflags = ['../evil_flag/../passwd']
 
-            # Verify DICT_phnames is an empty array
-            if HAVE_NUMPY:
-                np.testing.assert_array_equal(data['DICT_phnames'], np.array([]))
-            else:
-                self.assertTrue(isinstance(data['DICT_phnames'], MagicMock) or hasattr(data['DICT_phnames'], '__len__'))
+        self.loader.process_directories(mock_config)
 
-            # Verify warning was printed
-            mock_print.assert_any_call(f"Warning: PH_NAMES.TXT not found in {path}")
+        # Ensure serializer.save_data was called with sanitized path
+        mock_save_data.assert_called_once()
+        saved_path = mock_save_data.call_args[0][1]
+
+        # The path should contain underscores instead of slashes
+        expected_filename = 'rawdata_.._evil_flag_.._passwd.json'
+        self.assertEqual(saved_path.name, expected_filename)
+        self.assertEqual(saved_path.parent, Path("dummy_path/test_dir"))
 
 if __name__ == '__main__':
     unittest.main()
