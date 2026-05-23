@@ -243,17 +243,19 @@ class ThermodynamicCalculator:
             }
 
             temp1 = []
-            for el2 in elnames:
-                temp1.append(next(val_iter))
-            ph_data['X'] = np.array(temp1)
-
             if McalcFlag:
                 temp2, temp3 = [], []
-                for i, el2 in enumerate(elnames):
-                    m_val = next(val_iter)
-                    x_val = temp1[i]
+
+            for el2 in elnames:
+                x_val = pntEq.get_value_of(f'X({ph}, {el2})')
+                temp1.append(x_val)
+                if McalcFlag:
+                    m_val = pntEq.get_value_of(f'M({ph}, {el2})')
                     temp2.append(m_val)
                     temp3.append(m_val * x_val)
+
+            ph_data['X'] = np.array(temp1)
+            if McalcFlag:
                 ph_data['M'] = np.array(temp2)
                 ph_data['G'] = np.array(temp3)
 
