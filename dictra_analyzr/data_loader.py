@@ -44,7 +44,7 @@ class DataLoader:
             data['DICT_all_npms'] = np.loadtxt(path / 'PHASE_FRACTIONS.TXT', dtype=float)
             data['DICT_all_mus'] = np.loadtxt(path / 'CHEMICAL_POTENTIALS.TXT', dtype=float)
             data['T'] = np.loadtxt(path / 'T.DAT', dtype=int)
-        except Exception as e:
+        except (FileNotFoundError, IOError) as e:
             print(f"Error reading text files in {path}: {e}")
             raise
 
@@ -113,7 +113,7 @@ class DataLoader:
     def _find_nearest(self, array: np.ndarray, value: float) -> Tuple[int, float]:
         array = np.asarray(array)
         idx = (np.abs(array - value)).argmin()
-        return idx, array[idx]
+        return int(idx), float(array[idx])
 
     def calculate_u_fractions(self, mf: np.ndarray, sub_idx: List[int], elnames: np.ndarray) -> np.ndarray:
         # Avoid division by zero
