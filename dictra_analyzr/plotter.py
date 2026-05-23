@@ -15,10 +15,8 @@ class Plotter:
             dir_path = self.base_path / dir_name
             try:
                 if not dir_path.resolve().is_relative_to(self.base_path.resolve()):
-                    print(f"Warning: Directory {dir_path} is outside base path. Skipping.")
                     continue
-            except ValueError:
-                print(f"Warning: Directory {dir_path} is outside base path. Skipping.")
+            except Exception:
                 continue
             if not dir_path.exists(): continue
 
@@ -197,12 +195,9 @@ class Plotter:
             dir_path = path / dir_name
             try:
                 if not dir_path.resolve().is_relative_to(path.resolve()):
-                    print(f"Warning: Directory {dir_path} is outside base path. Skipping.")
                     continue
-            except ValueError:
-                print(f"Warning: Directory {dir_path} is outside base path. Skipping.")
+            except Exception:
                 continue
-
             fpath = dir_path / 'results_last.json'
             if not fpath.exists(): continue
 
