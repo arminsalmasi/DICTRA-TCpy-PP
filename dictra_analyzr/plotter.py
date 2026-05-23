@@ -322,8 +322,8 @@ class Plotter:
                     time_label = 'first' if t == 0 else 'last' # Simplification
                     csv_name = path / f'log10_AC_{time_label}_SER.csv'
                     df.to_csv(csv_name, index=False)
-                except OSError:
-                    pass
+                except OSError as e:
+                    print(f"Error saving CSV {csv_name}: {e}")
 
             full_legend.extend(current_keys)
 
