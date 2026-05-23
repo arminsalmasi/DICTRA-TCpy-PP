@@ -24,6 +24,8 @@ except ImportError:
     np = sys.modules['numpy']
     HAVE_NUMPY = False
 
+import numpy as np
+
 from dictra_analyzr.data_loader import DataLoader
 
 class TestDataLoader(unittest.TestCase):
