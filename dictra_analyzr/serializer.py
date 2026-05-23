@@ -1,7 +1,6 @@
 import json
 import dataclasses
 import numpy as np
-from pathlib import Path
 
 class DataEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -52,18 +51,17 @@ def data_decoder(dct):
 
     return dct
 
+def _encode_key(k):
+    if isinstance(k, (int, np.integer)):
+        return f"__int_key_{int(k)}"
+    if isinstance(k, tuple):
+        return f"__tuple_key_{json.dumps(k)}"
+    return k
+
 def _encode_dict_keys(obj):
     """Recursively converts dict keys to string if they are integers or tuples, keeping track of them."""
     if isinstance(obj, dict):
-        new_dict = {}
-        for k, v in obj.items():
-            if isinstance(k, (int, np.integer)):
-                new_dict[f"__int_key_{int(k)}"] = _encode_dict_keys(v)
-            elif isinstance(k, tuple):
-                new_dict[f"__tuple_key_{json.dumps(k)}"] = _encode_dict_keys(v)
-            else:
-                new_dict[k] = _encode_dict_keys(v)
-        return new_dict
+        return {_encode_key(k): _encode_dict_keys(v) for k, v in obj.items()}
     elif isinstance(obj, list):
         return [_encode_dict_keys(v) for v in obj]
     elif isinstance(obj, tuple):
@@ -74,22 +72,20 @@ def _encode_dict_keys(obj):
         return dataclasses.replace(obj, **{f.name: _encode_dict_keys(getattr(obj, f.name)) for f in dataclasses.fields(obj)})
     return obj
 
+def _decode_key(k):
+    if isinstance(k, str):
+        if k.startswith("__int_key_"):
+            return int(k[10:])
+        if k.startswith("__tuple_key_"):
+            return tuple(json.loads(k[12:]))
+    return k
+
 def _decode_dict_keys(obj):
     """Recursively restores dict keys to integer or tuple if they start with tracking prefixes."""
     if isinstance(obj, dict):
         if "__tuple__" in obj:
             return tuple(_decode_dict_keys(v) for v in obj["data"])
-
-        new_dict = {}
-        for k, v in obj.items():
-            if isinstance(k, str) and k.startswith("__int_key_"):
-                new_dict[int(k[10:])] = _decode_dict_keys(v)
-            elif isinstance(k, str) and k.startswith("__tuple_key_"):
-                tup_list = json.loads(k[12:])
-                new_dict[tuple(tup_list)] = _decode_dict_keys(v)
-            else:
-                new_dict[k] = _decode_dict_keys(v)
-        return new_dict
+        return {_decode_key(k): _decode_dict_keys(v) for k, v in obj.items()}
     elif isinstance(obj, list):
         return [_decode_dict_keys(v) for v in obj]
     return obj
