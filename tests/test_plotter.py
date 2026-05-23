@@ -25,11 +25,27 @@ class TestPlotter(unittest.TestCase):
         self.plotter = Plotter(Path("dummy_path"))
 
     @patch('dictra_analyzr.plotter.plt')
+    def test_plot_generic(self, mock_plt):
+        x = [1, 2, 3]
+        y = [4, 5, 6]
+        legend = 'Test Legend'
+        title = 'Test Title'
+        filename = 'test_file'
+        ylab = 'Y Axis'
+        xlims = [0, 10]
+        settings = MagicMock()
+
+        self.plotter.plot_generic(x, y, legend, title, filename, ylab, xlims, settings)
+
+        mock_plt.plot.assert_called_once_with(x, y, label=legend)
+        mock_plt.title.assert_called_once_with(title)
+
+    @patch('dictra_analyzr.plotter.plt')
     @patch('builtins.print')
     def test_save_fig_exception_handled(self, mock_print, mock_plt):
         """Test that _save_fig handles exceptions gracefully without crashing."""
         # Set up the mock to raise an Exception when savefig is called
-        mock_plt.savefig.side_effect = Exception("Mocked save error")
+        mock_plt.savefig.side_effect = OSError("Mocked save error")
 
         filename = "test_plot"
         xlims = [0, 10]
@@ -47,6 +63,22 @@ class TestPlotter(unittest.TestCase):
         # Verify that the exception was caught and printed
         mock_print.assert_called_once_with(f"Error saving figure {filename}: Mocked save error")
 
+    @patch('builtins.print')
+    @patch('pathlib.Path.glob')
+    def test_del_pngs_pdf_exception_handled(self, mock_glob, mock_print):
+        """Test that del_pngs_pdf handles OSError during file deletion and logs the error."""
+        mock_file = MagicMock()
+        mock_file.unlink.side_effect = OSError("Mocked unlink error")
+        mock_glob.return_value = [mock_file]
+
+        path = Path("dummy_dir")
+        self.plotter.del_pngs_pdf(path)
+
+        # Verify unlink was called (glob gives 2 files since there are 2 extensions in the method)
+        # We'll just verify the print call
+        mock_print.assert_any_call(f"Error deleting file {mock_file}: Mocked unlink error")
+
+    @unittest.skipIf(isinstance(sys.modules.get('numpy'), MagicMock), "Requires actual numpy")
     def test_get_xlims_valid(self):
         """Test get_xlims with valid iterable of arrays."""
         import numpy as np
@@ -57,6 +89,7 @@ class TestPlotter(unittest.TestCase):
         xlims = self.plotter.get_xlims(data)
         self.assertEqual(xlims, [5, 30])
 
+    @unittest.skipIf(isinstance(sys.modules.get('numpy'), MagicMock), "Requires actual numpy")
     def test_get_xlims_empty(self):
         """Test get_xlims with empty data list."""
         data = []
