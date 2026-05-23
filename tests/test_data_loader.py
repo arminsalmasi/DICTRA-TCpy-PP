@@ -1,6 +1,7 @@
 import sys
 if 'numpy' in sys.modules and type(sys.modules['numpy']).__name__ == 'MagicMock':
     del sys.modules['numpy']
+import numpy as np
 import unittest
 import tempfile
 from pathlib import Path
@@ -12,6 +13,7 @@ if 'tc_python' not in sys.modules:
 # Prevent numpy mock conflicts from test_corrector
 if 'numpy' in sys.modules and isinstance(sys.modules['numpy'], MagicMock):
     del sys.modules['numpy']
+import numpy as np
 
 try:
     import numpy as np
@@ -22,6 +24,9 @@ except ImportError:
     np = sys.modules['numpy']
     HAVE_NUMPY = False
 
+import numpy as np
+
+import numpy as np
 from dictra_analyzr.data_loader import DataLoader
 
 class TestDataLoader(unittest.TestCase):
@@ -57,6 +62,23 @@ class TestDataLoader(unittest.TestCase):
         expected_element1 = np.array([0.5, 0.0, 1.0])
         expected_element2 = np.array([0.5, 0.0, 0.0])
         expected_element3 = np.array([0.25, 0.5, 0.5])
+
+        np.testing.assert_allclose(result[0], expected_element1)
+        np.testing.assert_allclose(result[1], expected_element2)
+        np.testing.assert_allclose(result[2], expected_element3)
+
+    @unittest.skipIf(not HAVE_NUMPY, "Requires real numpy")
+    def test_calculate_u_fractions_all_zeroes(self):
+        """Test that division by zero is avoided when the array is entirely zeroes."""
+        mf = np.zeros((3, 3))
+        sub_idx = [0, 1]
+        elnames = ['Element1', 'Element2', 'Element3']
+
+        result = self.loader.calculate_u_fractions(mf, sub_idx, elnames)
+
+        expected_element1 = np.array([0.0, 0.0, 0.0])
+        expected_element2 = np.array([0.0, 0.0, 0.0])
+        expected_element3 = np.array([0.0, 0.0, 0.0])
 
         np.testing.assert_allclose(result[0], expected_element1)
         np.testing.assert_allclose(result[1], expected_element2)
@@ -118,9 +140,18 @@ class TestDataLoader(unittest.TestCase):
         np.testing.assert_array_equal(subs[0], np.array([]))
         self.assertEqual(subs[1], [])
 
+    def test_categorize_elements_invalid_input(self):
+        """Test _categorize_elements handles invalid non-iterable input safely."""
+        with self.assertRaises(TypeError):
+            self.loader._categorize_elements(None)
+
+        with self.assertRaises(TypeError):
+            self.loader._categorize_elements(123)
+
     @patch('builtins.print')
-    def test_get_values_from_textfiles_error_path(self, mock_print):
+    def test_get_values_from_textfiles_error_path(self, mock_print, mock_loadtxt):
         """Test that get_values_from_textfiles correctly catches and re-raises exceptions."""
+        mock_loadtxt.side_effect = Exception("Mocked read error")
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir)
 
@@ -147,6 +178,17 @@ class TestDataLoader(unittest.TestCase):
 
             # Reset permissions so tempfile can cleanup
             test_file.chmod(0o666)
+
+
+    @patch('builtins.print')
+    def test_get_timestamp_invalid_string(self, mock_print):
+        """Test that an invalid timeflag string defaults to the last timestep."""
+        times = [0.0, 1.0, 2.0, 3.0]
+        timeflag = "invalid_flag"
+        tS, nearestTime = self.loader.get_timestamp(times, timeflag)
+        self.assertEqual(tS, 3)
+        self.assertEqual(nearestTime, 3.0)
+        mock_print.assert_called_once_with(f"Warning: Invalid timeflag {timeflag}. Defaulting to last.")
 
 if __name__ == '__main__':
     unittest.main()
