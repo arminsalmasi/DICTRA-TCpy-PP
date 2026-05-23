@@ -41,6 +41,15 @@ except ImportError:
     np.bool_ = DummyBool
 
     sys.modules['numpy'] = np
+
+# NumPy 2.x compatibility fix
+if hasattr(np, 'integer') and isinstance(np.integer, type) and not issubclass(np.integer, int):
+    # In real NumPy 2.0+, np.integer is a base class that cannot be instantiated directly.
+    # We use np.int32 or np.int64 instead for tests.
+    test_np_int = np.int32
+else:
+    test_np_int = np.integer
+
 from dictra_analyzr.serialization import save_data, load_data
 from dictra_analyzr.config import TCSetting
 
@@ -62,8 +71,8 @@ class TestSerialization(unittest.TestCase):
             "list": [1, 2, 3],
             "dict": {"a": 1, "b": 2},
             "bool": True,
-            "numpy_int": np.int32(10),
-            "numpy_float": np.float64(5.5),
+            "numpy_int": test_np_int(10),
+            "numpy_float": np.floating(5.5) if isinstance(np, MagicMock) else np.float64(5.5),
             "numpy_bool": np.bool_(True),
             "numpy_array": np.array([1.0, 2.0, 3.0]),
             "tc_setting": tc_setting

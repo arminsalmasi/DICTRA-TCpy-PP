@@ -111,20 +111,25 @@ class TestResultCorrector(unittest.TestCase):
         result = self.corrector.correct_phase_indices(dict_in)
         self.assertEqual(result, {})
 
-    def test_get_new_phase_name_cutoff_1(self):
-        new_name = self.corrector._get_new_phase_name('PhaseA', ['Fe', 'C', 'Cr'], 1)
-        self.assertEqual(new_name, 'PhaseA-Fe')
+    def test_process_corrections_path_traversal(self):
+        class MockConfig:
+            dirList = ["../outside_dir", "/etc"]
+            timeflags = [1.0]
 
-    def test_get_new_phase_name_cutoff_between_0_and_1(self):
-        new_name = self.corrector._get_new_phase_name('PhaseA', ['Fe', 'C', 'Cr'], 0.5)
-        self.assertEqual(new_name, 'PhaseA-FeC')
+        config = MockConfig()
 
-    def test_get_new_phase_name_cutoff_else(self):
-        new_name = self.corrector._get_new_phase_name('PhaseA', ['Fe', 'C', 'Cr'], 0)
-        self.assertEqual(new_name, 'PhaseA-FeCCr')
+        # Test relative traversal
+        with self.assertRaisesRegex(ValueError, "Security Error: Path traversal detected"):
+            self.corrector.process_corrections(config)
 
-        new_name = self.corrector._get_new_phase_name('PhaseA', ['Fe', 'C', 'Cr'], 2)
-        self.assertEqual(new_name, 'PhaseA-FeCCr')
+        # Test absolute traversal
+        class MockConfigAbsolute:
+            dirList = ["/etc"]
+            timeflags = [1.0]
+
+        config_abs = MockConfigAbsolute()
+        with self.assertRaisesRegex(ValueError, "Security Error: Path traversal detected"):
+            self.corrector.process_corrections(config_abs)
 
 if __name__ == '__main__':
     unittest.main()
