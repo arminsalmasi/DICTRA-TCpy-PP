@@ -28,7 +28,6 @@ np_mock.array = dummy_array
 sys.modules['numpy'] = np_mock
 
 import unittest
-import numpy as np
 import io
 import os
 from dictra_analyzr.safe_io import safe_dump, safe_load

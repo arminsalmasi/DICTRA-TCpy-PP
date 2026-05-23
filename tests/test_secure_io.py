@@ -10,6 +10,7 @@ if 'numpy' in sys.modules and isinstance(sys.modules['numpy'], MagicMock):
 import numpy as np
 
 from dictra_analyzr.secure_io import secure_load, secure_save
+import json
 
 class TestSecureIO(unittest.TestCase):
     def test_secure_load_save(self):
@@ -58,6 +59,23 @@ class TestSecureIO(unittest.TestCase):
     def test_secure_load_file_not_found(self):
         with self.assertRaises(FileNotFoundError):
             secure_load("non_existent_file_path_12345.json")
+
+    def test_secure_save_unsupported_type(self):
+        class DummyObject:
+            pass
+
+        dummy = DummyObject()
+
+        # Create a temporary file
+        fd, temp_path = tempfile.mkstemp(suffix=".json")
+        os.close(fd)
+
+        try:
+            with self.assertRaisesRegex(TypeError, "Object of type .* is not JSON serializable"):
+                secure_save(dummy, temp_path)
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
 
 if __name__ == '__main__':
     unittest.main()
