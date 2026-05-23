@@ -15,6 +15,18 @@ class DataLoader:
         results = {}
         for dir_name in config.dirList:
             dir_path = self.base_path / dir_name
+
+            # Security check: Prevent path traversal
+            try:
+                resolved_base = self.base_path.resolve()
+                resolved_dir = dir_path.resolve()
+                if not resolved_dir.is_relative_to(resolved_base):
+                    print(f"Security Warning: Path traversal detected for '{dir_name}'. Skipping.")
+                    continue
+            except Exception as e:
+                print(f"Warning: Could not resolve path for '{dir_name}': {e}. Skipping.")
+                continue
+
             if not dir_path.exists():
                 print(f"Warning: Directory {dir_path} does not exist. Skipping.")
                 continue
@@ -44,7 +56,7 @@ class DataLoader:
             data['DICT_all_npms'] = np.loadtxt(path / 'PHASE_FRACTIONS.TXT', dtype=float)
             data['DICT_all_mus'] = np.loadtxt(path / 'CHEMICAL_POTENTIALS.TXT', dtype=float)
             data['T'] = np.loadtxt(path / 'T.DAT', dtype=int)
-        except Exception as e:
+        except (FileNotFoundError, IOError) as e:
             print(f"Error reading text files in {path}: {e}")
             raise
 
@@ -113,7 +125,7 @@ class DataLoader:
     def _find_nearest(self, array: np.ndarray, value: float) -> Tuple[int, float]:
         array = np.asarray(array)
         idx = (np.abs(array - value)).argmin()
-        return idx, array[idx]
+        return int(idx), float(array[idx])
 
     def calculate_u_fractions(self, mf: np.ndarray, sub_idx: List[int], elnames: np.ndarray) -> np.ndarray:
         # Avoid division by zero

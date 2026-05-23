@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Any, List
 from .config import Config, PlotSettings
 
 class Plotter:
@@ -237,15 +237,8 @@ class Plotter:
     # --- Plotting Primitives ---
 
     def plot_generic(self, x, y, legend, title, filename, ylab, xlims, settings: PlotSettings):
-        fig, ax = plt.subplots(1, 1, figsize=settings.figsize)
-        ax.plot(x, y, linewidth=settings.lineW)
-        ax.legend(legend, fontsize=settings.legF)
-        self._decorate_ax(ax, title, ylab, settings.xlab, xlims, settings)
-        self._save_fig(filename, xlims)
-        plt.close(fig)
-
-    def plot_dict(self, x, y_dict, title, filename, ylab, xlims, settings: PlotSettings):
-        self.plot_dict_generic(x, y_dict, title, filename, ylab, xlims, settings)
+        plt.plot(x, y, label=legend)
+        plt.title(title)
 
     def plot_dict_generic(self, x, y_dict, title, filename, ylab, xlims, settings: PlotSettings):
         fig, ax = plt.subplots(1, 1, figsize=settings.figsize)
@@ -359,7 +352,6 @@ class Plotter:
         suffix = f"_{xlims[0]}_{xlims[1]}"
         try:
             plt.savefig(f"{filename}{suffix}.png", dpi=400, bbox_inches='tight')
-            # plt.savefig(f"{filename}{suffix}.pdf", dpi=1000, bbox_inches='tight') # PDF often slow
         except Exception as e:
             print(f"Error saving figure {filename}: {e}")
 
