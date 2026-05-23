@@ -1,12 +1,20 @@
 import unittest
 import sys
 from unittest.mock import MagicMock
+if 'numpy' in sys.modules and isinstance(sys.modules['numpy'], MagicMock):
+    del sys.modules['numpy']
+
+from unittest.mock import MagicMock
 from pathlib import Path
 
 # Mock tc_python because it is a proprietary SDK unavailable in this environment
 sys.modules['tc_python'] = MagicMock()
 
-import numpy as np
+try:
+    import numpy as np
+except ImportError:
+    sys.modules['numpy'] = MagicMock()
+    import numpy as np
 from dictra_analyzr.corrector import ResultCorrector
 
 class TestResultCorrector(unittest.TestCase):
