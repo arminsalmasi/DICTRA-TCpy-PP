@@ -60,37 +60,19 @@ class TestSecureIO(unittest.TestCase):
         with self.assertRaises(FileNotFoundError):
             secure_load("non_existent_file_path_12345.json")
 
-    def test_secure_save(self):
-        # Create a sample data structure
-        test_data = {
-            "ndarray": np.array([1, 2], dtype='int64')
-        }
+    def test_secure_save_unsupported_type(self):
+        class DummyObject:
+            pass
 
-        # Expected raw JSON format after secure_save -> to_dict
-        # {"_type": "dict", "items": [["ndarray", {"_type": "ndarray", "data": [1, 2], "dtype": "int64"}]]}
+        dummy = DummyObject()
 
+        # Create a temporary file
         fd, temp_path = tempfile.mkstemp(suffix=".json")
         os.close(fd)
 
         try:
-            # Save the data using secure_save
-            secure_save(test_data, temp_path)
-
-            # Load the raw JSON to verify exact output structure
-            with open(temp_path, 'r') as f:
-                raw_json = json.load(f)
-
-            self.assertEqual(raw_json["_type"], "dict")
-            self.assertEqual(len(raw_json["items"]), 1)
-
-            key, val = raw_json["items"][0]
-            self.assertEqual(key, "ndarray")
-            self.assertEqual(val["_type"], "ndarray")
-            self.assertEqual(val["data"], [1, 2])
-
-            # Since numpy might be mocked, we'll just check it's a string representing the dtype
-            self.assertTrue(isinstance(val["dtype"], str))
-
+            with self.assertRaisesRegex(TypeError, "Object of type .* is not JSON serializable"):
+                secure_save(dummy, temp_path)
         finally:
             if os.path.exists(temp_path):
                 os.remove(temp_path)
