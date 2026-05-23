@@ -13,6 +13,7 @@ if 'tc_python' not in sys.modules:
 # Prevent numpy mock conflicts from test_corrector
 if 'numpy' in sys.modules and isinstance(sys.modules['numpy'], MagicMock):
     del sys.modules['numpy']
+import numpy as np
 
 try:
     import numpy as np
