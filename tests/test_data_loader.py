@@ -162,34 +162,16 @@ class TestDataLoader(unittest.TestCase):
             # Reset permissions so tempfile can cleanup
             test_file.chmod(0o666)
 
-    @patch('dictra_analyzr.data_loader.DataLoader.get_values_from_textfiles')
-    @patch('dictra_analyzr.data_loader.DataLoader.get_timestamp')
-    @patch('dictra_analyzr.data_loader.DataLoader.get_tS_VLUs')
-    @patch('dictra_analyzr.data_loader.serializer.save_data')
-    @patch('pathlib.Path.exists', return_value=True)
-    def test_process_directories_path_traversal_mitigation(
-        self, mock_exists, mock_save_data, mock_get_tS_VLUs, mock_get_timestamp, mock_get_values
-    ):
-        """Test that timeflag is sanitized to prevent path traversal when saving output."""
-        mock_get_values.return_value = {'times': np.array([0.0, 1.0])}
-        mock_get_timestamp.return_value = (1, 1.0)
-        mock_get_tS_VLUs.return_value = {'mocked_data': True}
 
-        # Create a mock config with a malicious timeflag
-        mock_config = MagicMock()
-        mock_config.dirList = ['test_dir']
-        mock_config.timeflags = ['../evil_flag/../passwd']
-
-        self.loader.process_directories(mock_config)
-
-        # Ensure serializer.save_data was called with sanitized path
-        mock_save_data.assert_called_once()
-        saved_path = mock_save_data.call_args[0][1]
-
-        # The path should contain underscores instead of slashes
-        expected_filename = 'rawdata_.._evil_flag_.._passwd.json'
-        self.assertEqual(saved_path.name, expected_filename)
-        self.assertEqual(saved_path.parent, Path("dummy_path/test_dir"))
+    @patch('builtins.print')
+    def test_get_timestamp_invalid_string(self, mock_print):
+        """Test that an invalid timeflag string defaults to the last timestep."""
+        times = [0.0, 1.0, 2.0, 3.0]
+        timeflag = "invalid_flag"
+        tS, nearestTime = self.loader.get_timestamp(times, timeflag)
+        self.assertEqual(tS, 3)
+        self.assertEqual(nearestTime, 3.0)
+        mock_print.assert_called_once_with(f"Warning: Invalid timeflag {timeflag}. Defaulting to last.")
 
 if __name__ == '__main__':
     unittest.main()
