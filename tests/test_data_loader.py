@@ -1,6 +1,7 @@
 import sys
 if 'numpy' in sys.modules and type(sys.modules['numpy']).__name__ == 'MagicMock':
     del sys.modules['numpy']
+import numpy as np
 import unittest
 import tempfile
 from pathlib import Path
@@ -12,6 +13,7 @@ if 'tc_python' not in sys.modules:
 # Prevent numpy mock conflicts from test_corrector
 if 'numpy' in sys.modules and isinstance(sys.modules['numpy'], MagicMock):
     del sys.modules['numpy']
+import numpy as np
 
 try:
     import numpy as np
@@ -22,6 +24,9 @@ except ImportError:
     np = sys.modules['numpy']
     HAVE_NUMPY = False
 
+import numpy as np
+
+import numpy as np
 from dictra_analyzr.data_loader import DataLoader
 
 class TestDataLoader(unittest.TestCase):
@@ -118,9 +123,18 @@ class TestDataLoader(unittest.TestCase):
         np.testing.assert_array_equal(subs[0], np.array([]))
         self.assertEqual(subs[1], [])
 
+    def test_categorize_elements_invalid_input(self):
+        """Test _categorize_elements handles invalid non-iterable input safely."""
+        with self.assertRaises(TypeError):
+            self.loader._categorize_elements(None)
+
+        with self.assertRaises(TypeError):
+            self.loader._categorize_elements(123)
+
     @patch('builtins.print')
-    def test_get_values_from_textfiles_error_path(self, mock_print):
+    def test_get_values_from_textfiles_error_path(self, mock_print, mock_loadtxt):
         """Test that get_values_from_textfiles correctly catches and re-raises exceptions."""
+        mock_loadtxt.side_effect = Exception("Mocked read error")
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir)
 
