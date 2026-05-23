@@ -3,7 +3,6 @@ import copy
 import numpy as np
 from pathlib import Path
 from .config import Config
-from .secure_io import secure_save
 from .safe_io import load_data, save_data
 
 class ResultCorrector:
