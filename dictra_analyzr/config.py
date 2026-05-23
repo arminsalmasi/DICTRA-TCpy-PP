@@ -10,6 +10,18 @@ class TCSetting:
     p3flag: bool
     mobFlag: bool = False
 
+    @classmethod
+    def from_dict(cls, data: dict):
+        if isinstance(data.get('database'), str):
+             data['database'] = [data['database']]
+        return cls(
+            database=data.get('database', ['TCFE9']),
+            acRefs=data.get('acRefs', []),
+            phsToSus=data.get('phsToSus', []),
+            p3flag=data.get('p3flag', False),
+            mobFlag=data.get('mobFlag', False)
+        )
+
 @dataclass
 class PlotSettings:
     legend: str
@@ -33,6 +45,30 @@ class PlotSettings:
     MPlotK: List[Tuple[str, str, str]] = field(default_factory=list)
     xlimsGM: List[float] = field(default_factory=list)
 
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(
+            legend=data.get('legend', ''),
+            lineW=data.get('lineW', 2),
+            legF=data.get('legF', 12),
+            xlims=data.get('xlims', []),
+            title=data.get('title', ''),
+            ylab=data.get('ylab', ''),
+            xlab=data.get('xlab', ''),
+            labF=data.get('labF', 12),
+            tickS=data.get('tickS', 12),
+            bins=data.get('bins', 5),
+            figsize=data.get('figsize', [10, 8]),
+            locLegSing=data.get('locLegSing', 'best'),
+            ncolLegSing=data.get('ncolLegSing', 1),
+            boxLW=data.get('boxLW', 2),
+            acSERleg=data.get('acSERleg', []),
+            MPlotlegs=data.get('MPlotlegs', []),
+            MPlotPhase=data.get('MPlotPhase', ''),
+            MPlotK=[tuple(k) for k in data.get('MPlotK', [])],
+            xlimsGM=data.get('xlimsGM', [])
+        )
+
 
 @dataclass
 class Actions:
@@ -45,6 +81,19 @@ class Actions:
     delPNGs: bool
     showPlot: bool
 
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(
+            read=data.get('read', False),
+            calc=data.get('calc', False),
+            value_correction=data.get('value_correction', False),
+            plot=data.get('plot', False),
+            plotoverlaid=data.get('plotoverlaid', False),
+            plotMG=data.get('plotMG', False),
+            delPNGs=data.get('delPNGs', False),
+            showPlot=data.get('showPlot', False)
+        )
+
 @dataclass
 class Config:
     timeflags: List[Any] # Can be 'first', 'last', or int/float
@@ -56,55 +105,10 @@ class Config:
     phase_changes: List[Tuple[str, str, float]] = field(default_factory=list)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Config":
-        # Parse nested structures
-        tc_data = data.get('tc_setting', {})
-        # Handle cases where database might be a string or list in legacy
-        if isinstance(tc_data.get('database'), str):
-             tc_data['database'] = [tc_data['database']]
-
-        tc_setting = TCSetting(
-            database=tc_data.get('database', ['TCFE9']),
-            acRefs=tc_data.get('acRefs', []),
-            phsToSus=tc_data.get('phsToSus', []),
-            p3flag=tc_data.get('p3flag', False),
-            mobFlag=tc_data.get('mobFlag', False)
-        )
-
-        plt_data = data.get('plot_settings', {})
-        plot_settings = PlotSettings(
-            legend=plt_data.get('legend', ''),
-            lineW=plt_data.get('lineW', 2),
-            legF=plt_data.get('legF', 12),
-            xlims=plt_data.get('xlims', []),
-            title=plt_data.get('title', ''),
-            ylab=plt_data.get('ylab', ''),
-            xlab=plt_data.get('xlab', ''),
-            labF=plt_data.get('labF', 12),
-            tickS=plt_data.get('tickS', 12),
-            bins=plt_data.get('bins', 5),
-            figsize=plt_data.get('figsize', [10, 8]),
-            locLegSing=plt_data.get('locLegSing', 'best'),
-            ncolLegSing=plt_data.get('ncolLegSing', 1),
-            boxLW=plt_data.get('boxLW', 2),
-            acSERleg=plt_data.get('acSERleg', []),
-            MPlotlegs=plt_data.get('MPlotlegs', []),
-            MPlotPhase=plt_data.get('MPlotPhase', ''),
-            MPlotK=[tuple(k) for k in plt_data.get('MPlotK', [])],
-            xlimsGM=plt_data.get('xlimsGM', [])
-        )
-
-        actions_data = data.get('actions', {})
-        actions = Actions(
-            read=actions_data.get('read', False),
-            calc=actions_data.get('calc', False),
-            value_correction=actions_data.get('value_correction', False),
-            plot=actions_data.get('plot', False),
-            plotoverlaid=actions_data.get('plotoverlaid', False),
-            plotMG=actions_data.get('plotMG', False),
-            delPNGs=actions_data.get('delPNGs', False),
-            showPlot=actions_data.get('showPlot', False)
-        )
+    def from_dict(cls, data: dict):
+        tc_setting = TCSetting.from_dict(data.get('tc_setting', {}))
+        plot_settings = PlotSettings.from_dict(data.get('plot_settings', {}))
+        actions = Actions.from_dict(data.get('actions', {}))
 
         # Handle list of lists for name_pairs if necessary, ensure tuples
         name_pairs = [tuple(p) for p in data.get('name_pairs', [])]
@@ -121,7 +125,7 @@ class Config:
         )
 
     @classmethod
-    def from_json(cls, json_path: str) -> "Config":
+    def from_json(cls, json_path: str):
         with open(json_path, 'r') as f:
             data = json.load(f)
         return cls.from_dict(data)
