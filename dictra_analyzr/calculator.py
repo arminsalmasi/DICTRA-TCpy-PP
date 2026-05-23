@@ -41,6 +41,15 @@ class ThermodynamicCalculator:
     def process_calculations(self, config: Config):
         for dir_name in config.dirList:
             dir_path = self.base_path / dir_name
+            try:
+                if not dir_path.resolve().is_relative_to(self.base_path.resolve()):
+                    print(f"Warning: Directory {dir_path} is outside base path. Skipping.")
+                    continue
+            except ValueError:
+                # Fallback for Python versions where is_relative_to might raise ValueError
+                print(f"Warning: Directory {dir_path} is outside base path. Skipping.")
+                continue
+
             for timeflag in config.timeflags:
                 input_file = dir_path / f'rawdata_{timeflag}.json'
                 output_file = dir_path / f'uncorrected_results_{timeflag}.json'

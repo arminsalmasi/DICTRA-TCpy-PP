@@ -16,15 +16,12 @@ class DataLoader:
         for dir_name in config.dirList:
             dir_path = self.base_path / dir_name
 
-            # Security check: Prevent path traversal
             try:
-                resolved_base = self.base_path.resolve()
-                resolved_dir = dir_path.resolve()
-                if not resolved_dir.is_relative_to(resolved_base):
-                    print(f"Security Warning: Path traversal detected for '{dir_name}'. Skipping.")
+                if not dir_path.resolve().is_relative_to(self.base_path.resolve()):
+                    print(f"Warning: Directory {dir_path} is outside base path. Skipping.")
                     continue
-            except Exception as e:
-                print(f"Warning: Could not resolve path for '{dir_name}': {e}. Skipping.")
+            except ValueError:
+                print(f"Warning: Directory {dir_path} is outside base path. Skipping.")
                 continue
 
             if not dir_path.exists():
