@@ -1,6 +1,5 @@
 import json
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import List, Tuple, Dict, Any, Optional
 
 @dataclass
@@ -57,10 +56,7 @@ class Config:
     phase_changes: List[Tuple[str, str, float]] = field(default_factory=list)
 
     @classmethod
-    def from_json(cls, json_path: str):
-        with open(json_path, 'r') as f:
-            data = json.load(f)
-
+    def from_dict(cls, data: Dict[str, Any]) -> "Config":
         # Parse nested structures
         tc_data = data.get('tc_setting', {})
         # Handle cases where database might be a string or list in legacy
@@ -123,3 +119,9 @@ class Config:
             name_pairs=name_pairs,
             phase_changes=phase_changes
         )
+
+    @classmethod
+    def from_json(cls, json_path: str) -> "Config":
+        with open(json_path, 'r') as f:
+            data = json.load(f)
+        return cls.from_dict(data)

@@ -1,10 +1,5 @@
 import unittest
 import sys
-from unittest.mock import MagicMock
-if 'numpy' in sys.modules and isinstance(sys.modules['numpy'], MagicMock):
-    del sys.modules['numpy']
-
-from unittest.mock import MagicMock
 from pathlib import Path
 import numpy as np
 

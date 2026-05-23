@@ -1,6 +1,5 @@
 from .serialization import save_data, load_data
 import copy
-import sys
 import numpy as np
 from pathlib import Path
 from .config import Config
@@ -70,11 +69,47 @@ class ResultCorrector:
                 except IndexError:
                     continue # Search element not present?
 
-                self._process_phase_points(
-                    n_pts, phase, tS_TC_NEAT_phXs, elnames, nelements,
-                    search_element_idx, cutoff, phase_to_change,
-                    CQT_tS_TC_NEAT_phXs, CQT_tS_TC_NEAT_npms
-                )
+                # Iterate points
+                for pt in range(n_pts):
+                    phXs = tS_TC_NEAT_phXs[phase][pt, :]
+                    if np.any(phXs > 0):
+                        # Sort by fraction to find major elements
+                        sorted_indices = np.flip(np.argsort(phXs))
+
+                        # sorted_indices contains all indices, so search_element_idx is guaranteed to be found
+                        search_idx = np.where(sorted_indices == search_element_idx)[0][0]
+
+                        condition_met = False
+                        if 0 < cutoff < 1:
+                             current_conc = phXs[search_element_idx]
+                             if current_conc > cutoff:
+                                 condition_met = True
+
+                        elif cutoff == 1:
+                            if search_idx == 0: # It is the largest constituent
+                                if phXs[search_element_idx] > 0:
+                                    condition_met = True
+
+                        if condition_met:
+                             sorted_elnames = elnames[sorted_indices]
+                             # Generate new phase name e.g. "BCC_A2-W" if top 2 elements are W and something else?
+                             # Original code uses top 2 elements for name generation if cutoff < 1, top 1 if cutoff == 1
+                             if 0 < cutoff < 1:
+                                 st = phase_to_change + '-' + "".join(sorted_elnames[:2])
+                             else:
+                                 st = phase_to_change + '-' + "".join(sorted_elnames[:1])
+
+                             # Add to new arrays
+                             if st not in CQT_tS_TC_NEAT_npms:
+                                 CQT_tS_TC_NEAT_phXs[st] = np.zeros((n_pts, nelements))
+                                 CQT_tS_TC_NEAT_npms[st] = np.zeros(n_pts)
+
+                             CQT_tS_TC_NEAT_phXs[st][pt] = phXs
+                             CQT_tS_TC_NEAT_npms[st][pt] = CQT_tS_TC_NEAT_npms[phase][pt]
+
+                             # Zero out old phase
+                             CQT_tS_TC_NEAT_phXs[phase][pt] = np.zeros(nelements)
+                             CQT_tS_TC_NEAT_npms[phase][pt] = 0
 
         d['CQT_tS_TC_NEAT_phXs'] = CQT_tS_TC_NEAT_phXs
         d['CQT_tS_TC_NEAT_npms'] = CQT_tS_TC_NEAT_npms
@@ -83,49 +118,9 @@ class ResultCorrector:
 
         return d
 
-    def _process_phase_points(self, n_pts, phase, tS_TC_NEAT_phXs, elnames, nelements,
-                              search_element_idx, cutoff, phase_to_change,
-                              CQT_tS_TC_NEAT_phXs, CQT_tS_TC_NEAT_npms):
-        # Iterate points
-        for pt in range(n_pts):
-            phXs = tS_TC_NEAT_phXs[phase][pt, :]
-            if np.any(phXs > 0):
-                # Sort by fraction to find major elements
-                # The logic in original code seems to try to find if 'search_element' is dominant
-                sorted_indices = np.flip(np.argsort(phXs))
+    def _check_condition_met(self, phXs, elnames, search_element, cutoff, search_idx):
+        return phXs[search_idx] > cutoff
 
-                # sorted_indices contains all indices, so search_element_idx is guaranteed to be found
-                search_idx = np.where(sorted_indices == search_element_idx)[0][0]
-
-                condition_met = self._check_condition_met(phXs, search_element_idx, cutoff, search_idx)
-
-                if condition_met:
-                     sorted_elnames = elnames[sorted_indices]
-                     st = self._get_new_phase_name(phase_to_change, sorted_elnames, cutoff)
-
-                     # Add to new arrays
-                     if st not in CQT_tS_TC_NEAT_npms:
-                         CQT_tS_TC_NEAT_phXs[st] = np.zeros((n_pts, nelements))
-                         CQT_tS_TC_NEAT_npms[st] = np.zeros(n_pts)
-
-                     CQT_tS_TC_NEAT_phXs[st][pt] = phXs
-                     CQT_tS_TC_NEAT_npms[st][pt] = CQT_tS_TC_NEAT_npms[phase][pt]
-
-                     # Zero out old phase
-                     CQT_tS_TC_NEAT_phXs[phase][pt] = np.zeros(nelements)
-                     CQT_tS_TC_NEAT_npms[phase][pt] = 0
-
-    def _check_condition_met(self, phXs, search_element_idx, cutoff, search_idx):
-        condition_met = False
-        if 0 < cutoff < 1:
-            current_conc = phXs[search_element_idx]
-            if current_conc > cutoff:
-                condition_met = True
-        elif cutoff == 1:
-            if search_idx == 0:
-                if phXs[search_element_idx] > 0:
-                    condition_met = True
-        return condition_met
 
     def _get_new_phase_name(self, phase_to_change, sorted_elnames, cutoff):
         if 0 < cutoff < 1:
