@@ -1,12 +1,20 @@
 import unittest
 import sys
 from unittest.mock import MagicMock
+if 'numpy' in sys.modules and isinstance(sys.modules['numpy'], MagicMock):
+    del sys.modules['numpy']
+
+from unittest.mock import MagicMock
 from pathlib import Path
 
 # Mock tc_python because it is a proprietary SDK unavailable in this environment
 sys.modules['tc_python'] = MagicMock()
 
-import numpy as np
+try:
+    import numpy as np
+except ImportError:
+    sys.modules['numpy'] = MagicMock()
+    import numpy as np
 from dictra_analyzr.corrector import ResultCorrector
 
 class TestResultCorrector(unittest.TestCase):
@@ -85,6 +93,44 @@ class TestResultCorrector(unittest.TestCase):
         dict_in = {}
         result = self.corrector.correct_phase_indices(dict_in)
         self.assertEqual(result, {})
+
+    def test_check_condition_met_cutoff_fraction_true(self):
+        elnames = np.array(['Fe', 'C', 'Cr'])
+        phXs = np.array([0.5, 0.1, 0.4])
+        result = self.corrector._check_condition_met(phXs, elnames, 'Cr', 0.3, 0)
+        self.assertTrue(result)
+
+    def test_check_condition_met_cutoff_fraction_false(self):
+        elnames = np.array(['Fe', 'C', 'Cr'])
+        phXs = np.array([0.5, 0.1, 0.4])
+        result = self.corrector._check_condition_met(phXs, elnames, 'Cr', 0.5, 0)
+        self.assertFalse(result)
+
+    def test_check_condition_met_cutoff_one_idx_zero_true(self):
+        elnames = np.array(['Fe', 'C', 'Cr'])
+        phXs = np.array([0.5, 0.1, 0.4])
+        result = self.corrector._check_condition_met(phXs, elnames, 'C', 1, 0)
+        self.assertTrue(result)
+
+    def test_check_condition_met_cutoff_one_idx_zero_false(self):
+        elnames = np.array(['Fe', 'C', 'Cr'])
+        phXs = np.array([0.5, 0.0, 0.4])
+        result = self.corrector._check_condition_met(phXs, elnames, 'C', 1, 0)
+        self.assertFalse(result)
+
+    def test_check_condition_met_cutoff_one_idx_nonzero(self):
+        elnames = np.array(['Fe', 'C', 'Cr'])
+        phXs = np.array([0.5, 0.1, 0.4])
+        result = self.corrector._check_condition_met(phXs, elnames, 'C', 1, 1)
+        self.assertFalse(result)
+
+    def test_check_condition_met_invalid_cutoff(self):
+        elnames = np.array(['Fe', 'C', 'Cr'])
+        phXs = np.array([0.5, 0.1, 0.4])
+        result_low = self.corrector._check_condition_met(phXs, elnames, 'C', 0, 0)
+        result_high = self.corrector._check_condition_met(phXs, elnames, 'C', 2, 0)
+        self.assertFalse(result_low)
+        self.assertFalse(result_high)
 
 if __name__ == '__main__':
     unittest.main()
