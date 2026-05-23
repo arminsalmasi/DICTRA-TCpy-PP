@@ -356,7 +356,7 @@ class Plotter:
             print(f"Error saving figure {filename}: {e}")
 
     def get_xlims(self, data):
-        xlims = [np.min([d[:, 0].min() for d in data]), np.max([d[:, 0].max() for d in data])]
+        xlims = [min(d[:, 0].min() for d in data), max(d[:, 0].max() for d in data)]
         return xlims
 
     def del_pngs_pdf(self, path: Path):
