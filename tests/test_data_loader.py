@@ -1,6 +1,7 @@
 import sys
 if 'numpy' in sys.modules and type(sys.modules['numpy']).__name__ == 'MagicMock':
     del sys.modules['numpy']
+import numpy as np
 import unittest
 import tempfile
 from pathlib import Path
@@ -12,6 +13,7 @@ if 'tc_python' not in sys.modules:
 # Prevent numpy mock conflicts from test_corrector
 if 'numpy' in sys.modules and isinstance(sys.modules['numpy'], MagicMock):
     del sys.modules['numpy']
+import numpy as np
 
 try:
     import numpy as np
@@ -22,6 +24,9 @@ except ImportError:
     np = sys.modules['numpy']
     HAVE_NUMPY = False
 
+import numpy as np
+
+import numpy as np
 from dictra_analyzr.data_loader import DataLoader
 
 class TestDataLoader(unittest.TestCase):
@@ -127,8 +132,9 @@ class TestDataLoader(unittest.TestCase):
             self.loader._categorize_elements(123)
 
     @patch('builtins.print')
-    def test_get_values_from_textfiles_error_path(self, mock_print):
+    def test_get_values_from_textfiles_error_path(self, mock_print, mock_loadtxt):
         """Test that get_values_from_textfiles correctly catches and re-raises exceptions."""
+        mock_loadtxt.side_effect = Exception("Mocked read error")
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir)
 
@@ -155,6 +161,55 @@ class TestDataLoader(unittest.TestCase):
 
             # Reset permissions so tempfile can cleanup
             test_file.chmod(0o666)
+
+
+    @patch('builtins.print')
+    def test_process_directories_path_traversal(self, mock_print):
+        """Test that path traversal attempts are detected and skipped."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            loader = DataLoader(tmpdir)
+
+            # Create a mock config with malicious paths
+            mock_config = MagicMock()
+            mock_config.dirList = ['../outside_dir', '/etc/passwd', 'valid_dir']
+
+            # valid_dir needs to exist to get past the exists() check
+            valid_path = Path(tmpdir) / 'valid_dir'
+            valid_path.mkdir()
+
+            # We mock get_values_from_textfiles so we don't try to actually read valid_dir
+            with patch.object(loader, 'get_values_from_textfiles') as mock_get_values:
+                # Mock return value to prevent downstream errors
+                mock_get_values.return_value = {
+                    'times': np.array([0.0, 1.0]),
+                    'all_pts': np.array([0.1, 0.2]),
+                    'n_pts': np.array([1, 1]),
+                    'DICT_phnames': np.array(['FCC_A1']),
+                    'DICT_all_npms': np.array([1.0, 1.0]),
+                    'elnames': np.array(['FE']),
+                    'all_mfs': np.array([1.0, 1.0]),
+                    'DICT_all_mus': np.array([0.0, 0.0]),
+                    'interstitials': [[], []],
+                    'substitutionals': [['FE'], [0]]
+                }
+
+                # Mock config.timeflags
+                mock_config.timeflags = ['last']
+
+                # Mock save_data to avoid writing files
+                with patch('dictra_analyzr.serializer.save_data'):
+                    loader.process_directories(mock_config)
+
+            # Verify the security warning was printed for both malicious paths
+            print_calls = [call[0][0] for call in mock_print.call_args_list]
+            traversal_warnings = [call for call in print_calls if 'Security Warning: Path traversal detected' in call]
+
+            self.assertEqual(len(traversal_warnings), 2)
+            self.assertTrue(any('../outside_dir' in w for w in traversal_warnings))
+            self.assertTrue(any('/etc/passwd' in w for w in traversal_warnings))
+
+            # Verify valid_dir was processed
+            mock_get_values.assert_called_once_with(valid_path)
 
 if __name__ == '__main__':
     unittest.main()

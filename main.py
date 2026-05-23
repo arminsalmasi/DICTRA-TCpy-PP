@@ -23,14 +23,8 @@ def main():
         print("Please ensure settings.json exists in the target directory.")
         sys.exit(1)
 
-    try:
-        pipeline = DictraPipeline(str(config_path), str(base_path))
-        pipeline.run()
-    except Exception as e:
-        print(f"Pipeline failed: {e}")
-        import traceback
-        traceback.print_exc()
-        sys.exit(1)
+    pipeline = DictraPipeline(str(config_path), str(base_path))
+    pipeline.run()
 
 if __name__ == "__main__":
     main()

@@ -60,8 +60,8 @@ class TestSerialization(unittest.TestCase):
             "list": [1, 2, 3],
             "dict": {"a": 1, "b": 2},
             "bool": True,
-            "numpy_int": np.integer(10),
-            "numpy_float": np.floating(5.5),
+            "numpy_int": np.int32(10),
+            "numpy_float": np.float64(5.5),
             "numpy_bool": np.bool_(True),
             "numpy_array": np.array([1.0, 2.0, 3.0]),
             "tc_setting": tc_setting
