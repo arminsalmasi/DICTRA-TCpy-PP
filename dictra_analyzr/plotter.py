@@ -240,9 +240,6 @@ class Plotter:
         plt.plot(x, y, label=legend)
         plt.title(title)
 
-    def plot_dict(self, x, y_dict, title, filename, ylab, xlims, settings: PlotSettings):
-        self.plot_dict_generic(x, y_dict, title, filename, ylab, xlims, settings)
-
     def plot_dict_generic(self, x, y_dict, title, filename, ylab, xlims, settings: PlotSettings):
         fig, ax = plt.subplots(1, 1, figsize=settings.figsize)
         legend_keys = list(y_dict.keys())
