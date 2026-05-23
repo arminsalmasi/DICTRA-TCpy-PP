@@ -9,7 +9,9 @@ import builtins
 
 try:
     import numpy as np
+    HAVE_NUMPY = True
 except ImportError:
+    HAVE_NUMPY = False
     class DummyNdarray(list):
         def __init__(self, data, dtype="float64"):
             super().__init__(data)

@@ -1,10 +1,8 @@
 from .serialization import save_data, load_data
 import copy
-import sys
 import numpy as np
 from pathlib import Path
 from .config import Config
-from .secure_io import secure_save
 from .safe_io import load_data, save_data
 
 class ResultCorrector:
@@ -75,28 +73,13 @@ class ResultCorrector:
                     phXs = tS_TC_NEAT_phXs[phase][pt, :]
                     if np.any(phXs > 0):
                         # Sort by fraction to find major elements
-                        # The logic in original code seems to try to find if 'search_element' is dominant
                         sorted_indices = np.flip(np.argsort(phXs))
 
                         # sorted_indices contains all indices, so search_element_idx is guaranteed to be found
-                        search_idx = np.where(sorted_indices == search_element_idx)[0][0]
-
-                        # Original logic reconstruction:
-                        # cutoff > 0 and < 1: check if search_element fraction > cutoff
-                        # cutoff == 1: check if search_element is the largest constituent (index 0)
+                        search_idx = sorted_indices.tolist().index(search_element_idx)
 
                         condition_met = False
                         if 0 < cutoff < 1:
-                             # Wait, original code checks sorted_phXs[sorted_searchElidx] > cutoff
-                             # sorted_phXs matches sorted_elnames.
-                             # So if search_element is at index `search_idx` in `sorted_elnames`,
-                             # its value is `phXs[original_index_of_search_element]`.
-                             # The original code:
-                             # sorted_phXs = ...
-                             # sorted_searchElidx = np.where( sorted_elnames ==  search_element )[0][0]
-                             # if sorted_phXs[sorted_searchElidx] > cutoff: ...
-
-                             # Let's trust the logic: is the concentration of search_element > cutoff?
                              current_conc = phXs[search_element_idx]
                              if current_conc > cutoff:
                                  condition_met = True
@@ -135,16 +118,8 @@ class ResultCorrector:
         return d
 
     def _check_condition_met(self, phXs, elnames, search_element, cutoff, search_idx):
-        condition_met = False
-        if 0 < cutoff < 1:
-            current_conc = phXs[np.where(elnames == search_element)[0][0]]
-            if current_conc > cutoff:
-                condition_met = True
-        elif cutoff == 1:
-            if search_idx == 0:
-                if phXs[np.where(elnames == search_element)[0][0]] > 0:
-                    condition_met = True
-        return condition_met
+        return phXs[search_idx] > cutoff
+
 
     def _get_new_phase_name(self, phase_to_change, sorted_elnames, cutoff):
         if cutoff == 1:
@@ -170,34 +145,33 @@ class ResultCorrector:
         keys = list(npms_dict.keys())
 
         # Merge numbered duplicates (e.g. BCC#1, BCC#2 -> BCC#1)
-        phs_without_Csets = set()
-        for key in keys:
-            if '#1' in key:
-                phs_without_Csets.add(key.split('#')[0])
-
-        for ph in phs_without_Csets:
-             base_key = ph + '#1'
-             if base_key not in npms_dict: continue
-
-             for i in range(2, 10):
-                 variant_key = f"{ph}#{i}"
-                 if variant_key in npms_dict:
-                     npms_dict[base_key] = npms_dict[base_key] + npms_dict[variant_key]
-                     npms_dict.pop(variant_key)
+        keys_to_process = list(npms_dict.keys())
+        for key in keys_to_process:
+            if '#' in key:
+                parts = key.rsplit('#', 1)
+                if len(parts) == 2 and parts[1].isdigit():
+                    variant_num = int(parts[1])
+                    if variant_num > 1:
+                        base_key = f"{parts[0]}#1"
+                        if base_key in npms_dict:
+                            npms_dict[base_key] = npms_dict[base_key] + npms_dict[key]
+                            npms_dict.pop(key)
 
         # Merge same names if any left (Original code logic seems to check for sorted(key) equality?)
         # "if sorted(keys[i]) == sorted(keys[j])": This implies checking for permutations of names?
         # Unlikely to be useful unless names are compositions.
         # But let's keep it to preserve behavior.
-        keys = list(npms_dict.keys())
-        for i in range(len(keys)):
-            for j in range(i + 1, len(keys)):
-                key1, key2 = keys[i], keys[j]
-                if key1 in npms_dict and key2 in npms_dict: # check existence as we pop
-                    if sorted(key1) == sorted(key2): # This is risky if names are just anagrams
-                        if key1 != key2:
-                            npms_dict[key1] = npms_dict[key1] + npms_dict[key2]
-                            npms_dict.pop(key2)
+        # O(N) hash-map grouping strategy for remaining anagrammatic names
+        anagram_map = {}
+        for key in list(npms_dict.keys()):
+            sorted_key = "".join(sorted(key))
+            if sorted_key in anagram_map:
+                base_anagram_key = anagram_map[sorted_key]
+                if base_anagram_key != key:
+                    npms_dict[base_anagram_key] = npms_dict[base_anagram_key] + npms_dict[key]
+                    npms_dict.pop(key)
+            else:
+                anagram_map[sorted_key] = key
 
         d['sum_CQT_tS_TC_NEAT_npms'] = npms_dict
         return d
@@ -205,10 +179,19 @@ class ResultCorrector:
     def phnameChange(self, dict_in):
         """Rename phases based on mapping."""
         d = copy.deepcopy(dict_in)
+        if 'name_pairs' not in d or not d['name_pairs']:
+            return d
+
         name_pairs = d['name_pairs']
 
         # Use sum_CQT_tS_TC_NEAT_npms if available, otherwise fallback to CQT_tS_TC_NEAT_npms
-        source_key = 'sum_CQT_tS_TC_NEAT_npms' if 'sum_CQT_tS_TC_NEAT_npms' in d else 'CQT_tS_TC_NEAT_npms'
+        if 'sum_CQT_tS_TC_NEAT_npms' in d:
+            source_key = 'sum_CQT_tS_TC_NEAT_npms'
+        elif 'CQT_tS_TC_NEAT_npms' in d:
+            source_key = 'CQT_tS_TC_NEAT_npms'
+        else:
+            return d
+
         npms_dict = d[source_key].copy()
 
         for name_from, name_to in name_pairs:
