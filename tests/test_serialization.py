@@ -9,7 +9,9 @@ import builtins
 
 try:
     import numpy as np
+    HAVE_NUMPY = True
 except ImportError:
+    HAVE_NUMPY = False
     class DummyNdarray(list):
         def __init__(self, data, dtype="float64"):
             super().__init__(data)
@@ -39,6 +41,15 @@ except ImportError:
     np.bool_ = DummyBool
 
     sys.modules['numpy'] = np
+
+# NumPy 2.x compatibility fix
+if hasattr(np, 'integer') and isinstance(np.integer, type) and not issubclass(np.integer, int):
+    # In real NumPy 2.0+, np.integer is a base class that cannot be instantiated directly.
+    # We use np.int32 or np.int64 instead for tests.
+    test_np_int = np.int32
+else:
+    test_np_int = np.integer
+
 from dictra_analyzr.serialization import save_data, load_data
 from dictra_analyzr.config import TCSetting
 

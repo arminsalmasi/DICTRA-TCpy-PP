@@ -1,0 +1,23 @@
+--- tests/test_corrector.py
++++ tests/test_corrector.py
+@@ -87,5 +87,20 @@
+         result = self.corrector.correct_phase_indices(dict_in)
+         self.assertEqual(result, {})
+
++    def test_get_new_phase_name_cutoff_1(self):
++        new_name = self.corrector._get_new_phase_name('PhaseA', ['Fe', 'C', 'Cr'], 1)
++        self.assertEqual(new_name, 'PhaseA-Fe')
++
++    def test_get_new_phase_name_cutoff_between_0_and_1(self):
++        new_name = self.corrector._get_new_phase_name('PhaseA', ['Fe', 'C', 'Cr'], 0.5)
++        self.assertEqual(new_name, 'PhaseA-FeC')
++
++    def test_get_new_phase_name_cutoff_else(self):
++        new_name = self.corrector._get_new_phase_name('PhaseA', ['Fe', 'C', 'Cr'], 0)
++        self.assertEqual(new_name, 'PhaseA-FeCCr')
++
++        new_name = self.corrector._get_new_phase_name('PhaseA', ['Fe', 'C', 'Cr'], 2)
++        self.assertEqual(new_name, 'PhaseA-FeCCr')
++
+ if __name__ == '__main__':
+     unittest.main()
