@@ -327,18 +327,21 @@ class Plotter:
             y_dict = data[keys[1]]
             current_keys = list(y_dict.keys())
 
+            csv_data = {'x': x}
+
             for k in current_keys:
                 log_y = np.log10(y_dict[k])
                 ax.plot(x, log_y, lstyle[t], linewidth=settings.lineW)
+                csv_data[f'{k}_log'] = log_y
 
-                # Export to CSV (feature from original code)
-                try:
-                    df = pd.DataFrame({'x': x, f'{k}_log': log_y})
-                    time_label = 'first' if t == 0 else 'last' # Simplification
-                    csv_name = path / f'log10_AC_{time_label}_SER.csv'
-                    df.to_csv(csv_name, index=False)
-                except OSError as e:
-                    print(f"Error saving CSV {csv_name}: {e}")
+            # Export to CSV (feature from original code)
+            try:
+                df = pd.DataFrame(csv_data)
+                time_label = 'first' if t == 0 else 'last' # Simplification
+                csv_name = path / f'log10_AC_{time_label}_SER.csv'
+                df.to_csv(csv_name, index=False)
+            except Exception:
+                pass
 
             full_legend.extend(current_keys)
 
