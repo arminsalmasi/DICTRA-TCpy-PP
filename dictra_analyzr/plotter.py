@@ -364,5 +364,5 @@ class Plotter:
             for f in path.glob(ext):
                 try:
                     f.unlink()
-                except OSError:
-                    pass
+                except OSError as e:
+                    print(f"Error deleting file {f}: {e}")
