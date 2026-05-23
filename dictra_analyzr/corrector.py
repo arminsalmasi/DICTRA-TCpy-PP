@@ -177,10 +177,19 @@ class ResultCorrector:
     def phnameChange(self, dict_in):
         """Rename phases based on mapping."""
         d = copy.deepcopy(dict_in)
+        if 'name_pairs' not in d or not d['name_pairs']:
+            return d
+
         name_pairs = d['name_pairs']
 
         # Use sum_CQT_tS_TC_NEAT_npms if available, otherwise fallback to CQT_tS_TC_NEAT_npms
-        source_key = 'sum_CQT_tS_TC_NEAT_npms' if 'sum_CQT_tS_TC_NEAT_npms' in d else 'CQT_tS_TC_NEAT_npms'
+        if 'sum_CQT_tS_TC_NEAT_npms' in d:
+            source_key = 'sum_CQT_tS_TC_NEAT_npms'
+        elif 'CQT_tS_TC_NEAT_npms' in d:
+            source_key = 'CQT_tS_TC_NEAT_npms'
+        else:
+            return d
+
         npms_dict = d[source_key].copy()
 
         for name_from, name_to in name_pairs:
