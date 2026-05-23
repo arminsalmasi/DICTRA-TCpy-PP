@@ -10,6 +10,7 @@ if 'numpy' in sys.modules and isinstance(sys.modules['numpy'], MagicMock):
 import numpy as np
 
 from dictra_analyzr.secure_io import secure_load, secure_save
+import json
 
 class TestSecureIO(unittest.TestCase):
     def test_secure_load_save(self):
